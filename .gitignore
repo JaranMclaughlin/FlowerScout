@@ -43,3 +43,43 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+# Backup files
+*.bak
+*_backup.dart
+
+# Temporary files
+*.log
+*.tmp
+
+# Scratch workspace
+scratch/
+
+# Test artifacts
+test_write.txt
+
+# Broken copies
+*.broken.yaml
+# Flutter
+.dart_tool/
+.flutter-plugins-dependencies
+build/
+
+# IDE
+.idea/
+*.iml
+
+# Logs
+*.log
+
+# Backup files
+*.bak
+*_backup.dart
+
+# Scratch workspace
+scratch/
+
+# Test artifacts
+test_write.txt
+
+# Broken copies
+*.broken.yaml
