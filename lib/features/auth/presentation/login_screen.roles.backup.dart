@@ -1,22 +1,10 @@
-import 'dart:math';
+﻿import 'dart:math';
 import 'package:flutter/material.dart';
 import '../../../shared/constants/motivational_messages.dart';
 import '../../../shared/widgets/app_shell.dart';
 import 'location_permission_screen.dart';
-import '../../../core/session/user_session.dart';
 
-enum LoginRole {
-  scout,
-  manager,
-  systemAdmin,
-}
-
-enum ManagerType {
-  productionManager,
-  sprayCoordinator,
-  regionalManager,
-  system,
-}
+enum ScoutRole { scout, manager }
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -27,8 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
-  LoginRole _role = LoginRole.scout;
-ManagerType? _managerType;
+  ScoutRole _role  = ScoutRole.scout;
   bool _obscure    = true;
   bool _loading    = false;
   String? _error;
@@ -67,7 +54,7 @@ ManagerType? _managerType;
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (_role == LoginRole.scout) {
+    if (_role == ScoutRole.scout) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => LocationPermissionScreen(scoutName: email.split('@').first)),
       );
@@ -139,16 +126,16 @@ ManagerType? _managerType;
                     Expanded(child: _RoleChip(
                       label: 'Scout',
                       icon: Icons.person_rounded,
-                      selected: _role == LoginRole.scout,
-                      onTap: () => setState(() => _role = LoginRole.scout),
+                      selected: _role == ScoutRole.scout,
+                      onTap: () => setState(() => _role = ScoutRole.scout),
                       isTablet: isTablet,
                     )),
                     const SizedBox(width: 10),
                     Expanded(child: _RoleChip(
                       label: 'Manager',
                       icon: Icons.shield_rounded,
-                      selected: _role == LoginRole.manager,
-                      onTap: () => setState(() => _role = LoginRole.manager),
+                      selected: _role == ScoutRole.manager,
+                      onTap: () => setState(() => _role = ScoutRole.manager),
                       isTablet: isTablet,
                     )),
                   ]),
@@ -356,10 +343,5 @@ class _RoleChip extends StatelessWidget {
     ),
   );
 }
-
-
-
-
-//test
 
 

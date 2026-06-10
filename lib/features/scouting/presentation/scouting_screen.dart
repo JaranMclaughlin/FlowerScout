@@ -1,9 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-// ─────────────────────────────────────────
 //  Design tokens
-// ─────────────────────────────────────────
 class AppColors {
   static const forest = Color(0xFF1B4332);
   static const canopy = Color(0xFF2D6A4F);
@@ -64,9 +62,7 @@ class AppText {
   );
 }
 
-// ─────────────────────────────────────────
 //  Data models
-// ─────────────────────────────────────────
 class FindingData {
   String category;
   String severity;
@@ -83,9 +79,7 @@ class FindingData {
   });
 }
 
-// ─────────────────────────────────────────
 //  Main screen
-// ─────────────────────────────────────────
 class ScoutingScreen extends StatefulWidget {
   const ScoutingScreen({super.key});
 
@@ -95,7 +89,6 @@ class ScoutingScreen extends StatefulWidget {
 
 class _ScoutingScreenState extends State<ScoutingScreen>
     with TickerProviderStateMixin {
-  // ── Farm data ──────────────────────────
   final Map<String, Map<String, List<String>>> farmData = {
     'Kongoni River Farm': {
       'GH-01': ['Athena', 'Moonwalk'],
@@ -127,7 +120,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
   late AnimationController _headerAnim;
   late Animation<double> _headerFade;
 
-  // ── Progress ───────────────────────────
   double get progress {
     double v = 0;
     if (selectedFarm != null) v += 0.25;
@@ -164,7 +156,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     setState(() => findings.removeAt(index));
   }
 
-  // ── Build ──────────────────────────────
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -200,7 +191,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
                             const SizedBox(height: 12),
                             _buildQuickButtons(),
                             const SizedBox(height: 32),
-                            _buildSectionLabel('FINDINGS  ·  ${findings.length}'),
                             const SizedBox(height: 12),
                             ...List.generate(findings.length, (i) {
                               return _AnimatedFindingCard(
@@ -237,13 +227,10 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Header ─────────────────────────────
   Widget _buildHeader(bool isWide) {
     final now = DateTime.now();
-    final dateStr =
-        '${_dayName(now.weekday)}, ${_monthName(now.month)} ${now.day}  ·  ${_pad(now.hour)}:${_pad(now.minute)}';
-
-    return Container(
+    final dateStr = '${_dayName(now.weekday)}, ${_pad(now.day)} ${_monthName(now.month)} ${now.year}';
+        return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -254,7 +241,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: AppColors.canopy.withOpacity(0.35),
+            color: AppColors.canopy.withValues(alpha: 0.35),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
@@ -271,7 +258,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
               height: 160,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.06),
+                color: Colors.white.withValues(alpha: 0.06),
               ),
             ),
           ),
@@ -283,7 +270,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
               height: 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.04),
+                color: Colors.white.withValues(alpha: 0.04),
               ),
             ),
           ),
@@ -300,7 +287,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.15),
+                          color: Colors.white.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -337,7 +324,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: Colors.white.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: const Icon(Icons.eco_rounded,
@@ -351,7 +338,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Selector row ───────────────────────
   Widget _buildSelectorRow(bool isWide) {
     final selectors = [
       _buildStyledDropdown<String>(
@@ -417,7 +403,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     required String label,
     required IconData icon,
     required T? value,
-    required String hint,
+    String hint = '',
     required List<T> items,
     required bool enabled,
     required ValueChanged<T?> onChanged,
@@ -439,7 +425,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -493,7 +479,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Progress card ──────────────────────
   Widget _buildProgressCard() {
     final steps = [
       ('Farm', selectedFarm != null),
@@ -510,7 +495,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
         border: Border.all(color: AppColors.divider),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -550,7 +535,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
             tween: Tween(begin: 0, end: progress),
             duration: const Duration(milliseconds: 600),
             curve: Curves.easeOutCubic,
-            builder: (_, v, __) => ClipRRect(
+            builder: (_, v, _) => ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: v,
@@ -613,7 +598,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Quick buttons ──────────────────────
   static const _quickItems = [
     ('Disease', Icons.coronavirus_rounded, AppColors.disease),
     ('Pest', Icons.bug_report_rounded, AppColors.pest),
@@ -638,7 +622,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Add finding button ─────────────────
   Widget _buildAddFindingButton() {
     return GestureDetector(
       onTap: () => _addFinding(),
@@ -672,7 +655,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Notes ──────────────────────────────
   Widget _buildNotesCard() {
     return Container(
       decoration: BoxDecoration(
@@ -685,8 +667,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
         maxLines: 5,
         style: AppText.bodyStyle,
         decoration: InputDecoration(
-          hintText:
-              'Add overall notes about this inspection — conditions, observations, follow-up actions…',
+          hintText: '',
           hintStyle: AppText.bodyStyle.copyWith(color: AppColors.slate),
           contentPadding: const EdgeInsets.all(20),
           border: InputBorder.none,
@@ -695,7 +676,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Submit ─────────────────────────────
   Widget _buildSubmitButton() {
     final ready = selectedFarm != null &&
         selectedGreenhouse != null &&
@@ -715,7 +695,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
         boxShadow: ready
             ? [
                 BoxShadow(
-                  color: AppColors.canopy.withOpacity(0.4),
+                  color: AppColors.canopy.withValues(alpha: 0.4),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 )
@@ -777,7 +757,6 @@ class _ScoutingScreenState extends State<ScoutingScreen>
     );
   }
 
-  // ── Helpers ────────────────────────────
   Widget _buildSectionLabel(String text) {
     return Text(text, style: AppText.labelStyle);
   }
@@ -791,9 +770,7 @@ class _ScoutingScreenState extends State<ScoutingScreen>
   String _pad(int n) => n.toString().padLeft(2, '0');
 }
 
-// ─────────────────────────────────────────
 //  Quick chip
-// ─────────────────────────────────────────
 class _QuickChip extends StatefulWidget {
   final String label;
   final IconData icon;
@@ -847,10 +824,10 @@ class _QuickChipState extends State<_QuickChip>
           padding:
               const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: widget.color.withOpacity(0.08),
+            color: widget.color.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: widget.color.withOpacity(0.2), width: 1.5),
+                color: widget.color.withValues(alpha: 0.2), width: 1.5),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -870,7 +847,7 @@ class _QuickChipState extends State<_QuickChip>
                 width: 18,
                 height: 18,
                 decoration: BoxDecoration(
-                  color: widget.color.withOpacity(0.15),
+                  color: widget.color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.add, size: 12, color: widget.color),
@@ -883,9 +860,7 @@ class _QuickChipState extends State<_QuickChip>
   }
 }
 
-// ─────────────────────────────────────────
 //  Animated Finding Card
-// ─────────────────────────────────────────
 class _AnimatedFindingCard extends StatefulWidget {
   final int index;
   final FindingData data;
@@ -992,7 +967,7 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
             border: Border.all(color: AppColors.divider),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 3),
               ),
@@ -1000,12 +975,11 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
           ),
           child: Column(
             children: [
-              // ── Card header bar ───────────
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.07),
+                  color: accentColor.withValues(alpha: 0.07),
                   borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(20)),
                   border: Border(
@@ -1018,7 +992,7 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: accentColor.withOpacity(0.12),
+                        color: accentColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Center(
@@ -1042,7 +1016,7 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: sevColor.withOpacity(0.12),
+                        color: sevColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -1062,7 +1036,7 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                           width: 30,
                           height: 30,
                           decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.07),
+                            color: Colors.red.withValues(alpha: 0.07),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(Icons.close_rounded,
@@ -1073,7 +1047,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                 ),
               ),
 
-              // ── Card body ─────────────────
               Padding(
                 padding: const EdgeInsets.all(20),
                 child: Column(
@@ -1095,7 +1068,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                     _buildTextField(
                       controller: _issueCtrl,
                       label: 'Issue Description',
-                      hint: 'Describe the issue observed…',
                       icon: Icons.description_outlined,
                     ),
                     const SizedBox(height: 16),
@@ -1108,7 +1080,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                             child: _buildTextField(
                               controller: _areaCtrl,
                               label: 'Affected Area',
-                              hint: '0–100',
                               icon: Icons.area_chart_rounded,
                               suffix: '%',
                               keyboardType: TextInputType.number,
@@ -1119,7 +1090,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                             child: _buildTextField(
                               controller: _notesCtrl,
                               label: 'Notes',
-                              hint: 'Additional observations…',
                               icon: Icons.notes_rounded,
                               maxLines: 3,
                             ),
@@ -1130,7 +1100,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                       _buildTextField(
                         controller: _areaCtrl,
                         label: 'Affected Area (%)',
-                        hint: '0 – 100',
                         icon: Icons.area_chart_rounded,
                         suffix: '%',
                         keyboardType: TextInputType.number,
@@ -1139,7 +1108,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
                       _buildTextField(
                         controller: _notesCtrl,
                         label: 'Notes',
-                        hint: 'Additional observations…',
                         icon: Icons.notes_rounded,
                         maxLines: 3,
                       ),
@@ -1203,9 +1171,9 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
         ),
         Container(
           decoration: BoxDecoration(
-            color: sevColor.withOpacity(0.06),
+            color: sevColor.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: sevColor.withOpacity(0.2)),
+            border: Border.all(color: sevColor.withValues(alpha: 0.2)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -1247,7 +1215,7 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
-    required String hint,
+    String hint = '',
     required IconData icon,
     String? suffix,
     int maxLines = 1,
@@ -1288,3 +1256,6 @@ class _AnimatedFindingCardState extends State<_AnimatedFindingCard>
     );
   }
 }
+
+
+

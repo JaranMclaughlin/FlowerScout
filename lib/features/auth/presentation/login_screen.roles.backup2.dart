@@ -67,7 +67,7 @@ ManagerType? _managerType;
     if (!mounted) return;
     setState(() => _loading = false);
 
-    if (_role == LoginRole.scout) {
+    if (_role == ScoutRole.scout) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => LocationPermissionScreen(scoutName: email.split('@').first)),
       );
@@ -139,16 +139,16 @@ ManagerType? _managerType;
                     Expanded(child: _RoleChip(
                       label: 'Scout',
                       icon: Icons.person_rounded,
-                      selected: _role == LoginRole.scout,
-                      onTap: () => setState(() => _role = LoginRole.scout),
+                      selected: _role == ScoutRole.scout,
+                      onTap: () => setState(() => _role = ScoutRole.scout),
                       isTablet: isTablet,
                     )),
                     const SizedBox(width: 10),
                     Expanded(child: _RoleChip(
                       label: 'Manager',
                       icon: Icons.shield_rounded,
-                      selected: _role == LoginRole.manager,
-                      onTap: () => setState(() => _role = LoginRole.manager),
+                      selected: _role == ScoutRole.manager,
+                      onTap: () => setState(() => _role = ScoutRole.manager),
                       isTablet: isTablet,
                     )),
                   ]),
@@ -361,5 +361,4 @@ class _RoleChip extends StatelessWidget {
 
 
 //test
-
 
