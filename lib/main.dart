@@ -3,8 +3,10 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
+import 'core/session/user_session.dart';
 import 'features/auth/presentation/login_screen.dart';
 import 'shared/widgets/app_shell.dart';
+import 'shared/providers/farm_providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +41,7 @@ class _AuthGateState extends State<_AuthGate> {
   @override
   void initState() {
     super.initState();
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) async {
       if (!mounted) return;
       final event = data.event;
       final session = data.session;
@@ -47,11 +49,31 @@ class _AuthGateState extends State<_AuthGate> {
           (event == AuthChangeEvent.signedIn ||
            event == AuthChangeEvent.userUpdated ||
            event == AuthChangeEvent.passwordRecovery)) {
+        try {
+          final uid = Supabase.instance.client.auth.currentUser?.id;
+          if (uid != null) {
+            final row = await Supabase.instance.client
+                .from('user_profiles')
+                .select('role, full_name')
+                .eq('id', uid)
+                .single();
+            final role = row['role'] as String? ?? 'scout';
+            UserSession.currentUser = row['full_name'] as String? ?? '';
+            UserSession.currentProfile = switch (role) {
+              'system_admin' => UserProfile.systemAdmin,
+              'manager'      => UserProfile.manager,
+              _              => UserProfile.scout,
+            };
+          }
+        } catch (_) {}
+        if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const AppShell()),
           (route) => false,
         );
       } else if (event == AuthChangeEvent.signedOut) {
+        UserSession.currentProfile = UserProfile.scout;
+        UserSession.currentUser = '';
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (_) => const LoginScreen()),
           (route) => false,
