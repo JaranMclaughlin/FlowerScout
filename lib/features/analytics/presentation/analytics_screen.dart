@@ -1,6 +1,18 @@
 import 'package:flutter/material.dart';
+
 class AnalyticsScreen extends StatelessWidget {
   const AnalyticsScreen({super.key});
+
   @override
-  Widget build(BuildContext context) => const Scaffold(body: Center(child: Text('Analytics')));
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Text(
+        'Analytics Module',
+        style: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
 }

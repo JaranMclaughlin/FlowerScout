@@ -1,214 +1,211 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../features/auth/presentation/login_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
-import '../../features/scouting/presentation/scouting_screen.dart';
+import '../../features/scouting/presentation/scouting_screen.dart' hide AppColors;
 import '../../features/maps/presentation/maps_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
-import '../../features/analytics/presentation/analytics_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
+import '../theme/app_colors.dart' show AppColors;
+import '../../core/theme/app_theme.dart' show AppSizes;
+import '../providers/shell_tab_provider.dart';
 
-class AppShell extends StatefulWidget {
+class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
-
   @override
-  State<AppShell> createState() => _AppShellState();
+  ConsumerState<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
-  int selectedIndex = 0;
-
-  final List<Widget> pages = const [
+class _AppShellState extends ConsumerState<AppShell> {
+  static const _pages = [
     DashboardScreen(),
     ScoutingScreen(),
     MapsScreen(),
     ReportsScreen(),
-    AnalyticsScreen(),
     SettingsScreen(),
+  ];
+
+  static const _items = [
+    _NavItem(Icons.dashboard_rounded,   Icons.dashboard_outlined,   'Dashboard'),
+    _NavItem(Icons.grass_rounded,       Icons.grass_outlined,       'Scouting'),
+    _NavItem(Icons.map_rounded,         Icons.map_outlined,         'Maps'),
+    _NavItem(Icons.bar_chart_rounded,   Icons.bar_chart_outlined,   'Reports'),
+    _NavItem(Icons.settings_rounded,    Icons.settings_outlined,    'Settings'),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width >= 600;
+    return isTablet ? _tabletLayout() : _phoneLayout();
+  }
+
+  int get _index => ref.watch(selectedTabProvider);
+  void _setIndex(int i) => ref.read(selectedTabProvider.notifier).set(i);
+
+  // ── Phone — bottom nav, slightly smaller than Material default ─────────────
+  Widget _phoneLayout() {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F2),
+      body: _pages[_index],
+      bottomNavigationBar: NavigationBarTheme(
+        data: NavigationBarThemeData(
+          height: 58, // was default ~80
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return TextStyle(
+              fontSize: 10.5,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+              color: selected ? AppColors.leaf : AppColors.muted,
+            );
+          }),
+          iconTheme: WidgetStateProperty.resolveWith((states) {
+            final selected = states.contains(WidgetState.selected);
+            return IconThemeData(
+              size: 20, // was default 24
+              color: selected ? AppColors.leaf : AppColors.muted,
+            );
+          }),
+        ),
+        child: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: _setIndex,
+          backgroundColor: Colors.white,
+          indicatorColor: AppColors.leaf.withValues(alpha: 0.15),
+          labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+          destinations: _items.map((item) => NavigationDestination(
+            icon: Icon(item.iconOutlined),
+            selectedIcon: Icon(item.icon),
+            label: item.label,
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  // ── Tablet/Desktop — sidebar, narrower than before ──────────────────────────
+  Widget _tabletLayout() {
+    final isExtended = MediaQuery.of(context).size.width >= 800;
+    return Scaffold(
       body: Row(
         children: [
-          _buildSidebar(),
-          _buildMainContent(),
-        ],
-      ),
-    );
-  }
-
-  // ================= SIDEBAR =================
-  Widget _buildSidebar() {
-    return Container(
-      width: 260,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          right: BorderSide(color: Color(0xFFEAEAEA)),
-        ),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 30),
-
-          // Logo
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(20),
+          NavigationRailTheme(
+            data: const NavigationRailThemeData(
+              selectedIconTheme: IconThemeData(color: AppColors.leaf, size: 20),
+              unselectedIconTheme: IconThemeData(color: AppColors.muted, size: 20),
+              selectedLabelTextStyle: TextStyle(
+                color: AppColors.leaf, fontWeight: FontWeight.w600, fontSize: 12,
+              ),
+              unselectedLabelTextStyle: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
-            child: const Icon(
-              Icons.local_florist,
-              color: Color(0xFF2E7D32),
-              size: 40,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          const Text(
-            'FlowerScout',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-          const Text(
-            'Kongoni River Farm',
-            style: TextStyle(color: Colors.grey),
-          ),
-
-          const SizedBox(height: 30),
-
-          // Navigation
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _navItem(Icons.dashboard, 'Dashboard', 0),
-                _navItem(Icons.search, 'Scouting', 1),
-                _navItem(Icons.map, 'Maps', 2),
-                _navItem(Icons.description, 'Reports', 3),
-                _navItem(Icons.analytics, 'Analytics', 4),
-                _navItem(Icons.settings, 'Settings', 5),
-              ],
-            ),
-          ),
-
-          // User card
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE8F5E9),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: const Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Color(0xFF2E7D32),
-                  child: Icon(Icons.person, color: Colors.white),
+            child: NavigationRail(
+              selectedIndex: _index,
+              onDestinationSelected: _setIndex,
+              backgroundColor: Colors.white,
+              extended: isExtended,
+              minWidth: 64,    // was default 72
+              minExtendedWidth: 180, // was default 256
+              indicatorColor: AppColors.leaf.withValues(alpha: 0.15),
+              groupAlignment: -1.0,
+              leading: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE1F5EE),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF9FE1CB)),
+                  ),
+                  child: const Icon(Icons.local_florist,
+                      color: AppColors.leaf, size: 18),
                 ),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Farm Manager',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: AppSizes.space2xl),
+                    child: _signOutButton(isExtended),
                   ),
                 ),
+              ),
+              destinations: _items.map((item) => NavigationRailDestination(
+                icon: Icon(item.iconOutlined),
+                selectedIcon: Icon(item.icon),
+                label: Text(item.label),
+              )).toList(),
+            ),
+          ),
+          const VerticalDivider(thickness: 0.5, width: 0.5),
+          Expanded(child: _pages[_index]),
+        ],
+      ),
+    );
+  }
+
+  Widget _signOutButton(bool extended) {
+    return Tooltip(
+      message: 'Sign out',
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+        onTap: () async {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (_) => AlertDialog(
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
+              title: const Text('Sign out?',
+                  style: TextStyle(fontFamily: 'Georgia', fontSize: 18)),
+              content: const Text(
+                  'You will need to log in again to access FlowerScout.'),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel')),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Sign out',
+                      style: TextStyle(color: AppColors.critical)),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= MAIN CONTENT =================
-  Widget _buildMainContent() {
-    return Expanded(
-      child: Column(
-        children: [
-          _buildTopBar(),
-
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: pages[selectedIndex],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ================= TOP BAR =================
-  Widget _buildTopBar() {
-    return Container(
-      height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      alignment: Alignment.centerLeft,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          bottom: BorderSide(color: Color(0xFFEAEAEA)),
-        ),
-      ),
-      child: const Text(
-        'FlowerScout',
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  // ================= NAV ITEM =================
-  Widget _navItem(IconData icon, String title, int index) {
-    final selected = selectedIndex == index;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: () {
-          setState(() {
-            selectedIndex = index;
-          });
+          );
+          if (confirm == true) {
+            await Supabase.instance.client.auth.signOut();
+            if (mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                (route) => false,
+              );
+            }
+          }
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          padding: EdgeInsets.symmetric(
+              horizontal: extended ? 14 : 8, vertical: 8),
           decoration: BoxDecoration(
-            color: selected ? const Color(0xFFE8F5E9) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+            color: const Color(0xFFFEF2F2),
+            borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           ),
-          child: Row(
-            children: [
-              Icon(
-                icon,
-                color:
-                    selected ? const Color(0xFF2E7D32) : Colors.black54,
-              ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight:
-                      selected ? FontWeight.bold : FontWeight.normal,
-                  color:
-                      selected ? const Color(0xFF2E7D32) : Colors.black87,
-                ),
-              ),
-            ],
-          ),
+          child: extended
+              ? const Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.logout_rounded, color: AppColors.critical, size: 18),
+                  SizedBox(width: 6),
+                  Text('Sign out',
+                      style: TextStyle(
+                          color: AppColors.critical,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                ])
+              : const Icon(Icons.logout_rounded, color: AppColors.critical, size: 18),
         ),
       ),
     );
   }
+}
+
+class _NavItem {
+  final IconData icon;
+  final IconData iconOutlined;
+  final String label;
+  const _NavItem(this.icon, this.iconOutlined, this.label);
 }

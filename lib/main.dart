@@ -1,22 +1,68 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/presentation/login_screen.dart';
+import 'shared/widgets/app_shell.dart';
 
-void main() {
-  runApp(const FlowerScoutApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load(fileName: '.env');
+  await Supabase.initialize(
+    url:     dotenv.env['SUPABASE_URL']!,
+    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  );
+  runApp(const ProviderScope(child: FlowerScoutApp()));
 }
 
 class FlowerScoutApp extends StatelessWidget {
   const FlowerScoutApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Flower Scout',
       theme: AppTheme.lightTheme,
-      home: LoginScreen(),
+      home: const _AuthGate(),
     );
+  }
+}
+
+class _AuthGate extends StatefulWidget {
+  const _AuthGate();
+  @override
+  State<_AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<_AuthGate> {
+  @override
+  void initState() {
+    super.initState();
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (!mounted) return;
+      final event = data.event;
+      final session = data.session;
+      if (session != null &&
+          (event == AuthChangeEvent.signedIn ||
+           event == AuthChangeEvent.userUpdated ||
+           event == AuthChangeEvent.passwordRecovery)) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AppShell()),
+          (route) => false,
+        );
+      } else if (event == AuthChangeEvent.signedOut) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    });
+  }
+  @override
+  Widget build(BuildContext context) {
+    final session = Supabase.instance.client.auth.currentSession;
+    if (session != null) return const AppShell();
+    return const LoginScreen();
   }
 }
