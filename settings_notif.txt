@@ -1,0 +1,43 @@
+35: enum _Tab { farms, profile, team, notifications, preferences }
+53: // Notification toggles
+54: bool _notifOverdue  = true;
+55: bool _notifCritical = true;
+56: bool _notifWeekly   = false;
+57: bool _notifPush     = true;
+58: bool _notifEmail    = true;
+59: bool _notifSms      = false;
+236: return [_Tab.profile, _Tab.notifications, _Tab.preferences];
+250: _Tab.notifications => _buildNotificationsTab(),
+272: onRetry: () => ref.read(farmsProvider.notifier).refresh()),
+303: ref.read(farmsProvider.notifier).refresh()),
+316: final expanded    = ValueNotifier(true);
+430: ? (v) => ref.read(farmsProvider.notifier)
+447: onRetry: () => ref.read(profileProvider.notifier).refresh()),
+491: await ref.read(profileProvider.notifier).save(
+590: // TAB 4 — Notifications
+592: Widget _buildNotificationsTab() => Column(
+595: _sectionHeader('Notifications & alerts',
+596: s.controlNotif,
+597: Icons.notifications_rounded, _C.canopy),
+599: _card(label: 'INSPECTION ALERTS', child: Column(children: [
+600: _toggleRow('Overdue inspection reminder',
+601: 'Notify when a greenhouse passes its inspection date',
+602: _notifOverdue, (v) => setState(() => _notifOverdue = v)),
+604: _toggleRow(s.criticalAlert,
+605: 'Immediate push when health score drops below threshold',
+606: _notifCritical, (v) => setState(() => _notifCritical = v)),
+608: _toggleRow('Weekly summary report',
+609: s.weeklyDescFull,
+610: _notifWeekly, (v) => setState(() => _notifWeekly = v)),
+613: _card(label: 'DELIVERY CHANNELS', child: Column(children: [
+614: _toggleRow('Push notifications', 'Mobile and desktop',
+615: _notifPush, (v) => setState(() => _notifPush = v)),
+619: _notifEmail, (v) => setState(() => _notifEmail = v)),
+621: _toggleRow('SMS', 'Add phone number in Profile',
+622: _notifSms, (v) => setState(() => _notifSms = v)),
+625: _saveButton('Save notification settings'),
+644: onTap: () => ref.read(localeProvider.notifier).setLanguage('en'),
+661: onTap: () => ref.read(localeProvider.notifier).setLanguage('sw'),
+918: showDialog(context: context, builder: (_) => AlertDialog(
+932: Navigator.of(context).pushAndRemoveUntil(
+966: _Tab.notifications => (label: s.tabNotifications, icon: Icons.notifications_rounded),

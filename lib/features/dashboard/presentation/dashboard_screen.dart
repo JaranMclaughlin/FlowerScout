@@ -130,11 +130,11 @@ class _NarrowBody extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Actions', style: AppTextStyles.heading),
+        Text(s.quickActions, style: AppTextStyles.heading),
         const SizedBox(height: AppSizes.spaceMd),
         _QuickActions(),
         const SizedBox(height: AppSizes.space2xl),
-        Text('Report Summary', style: AppTextStyles.heading),
+        Text(s.reportSummary, style: AppTextStyles.heading),
         const SizedBox(height: AppSizes.spaceMd),
         _ReportSummaryCard(stats: stats, ref: ref, s: s),
         const SizedBox(height: AppSizes.space2xl),
@@ -163,7 +163,7 @@ class _ReportSummaryCard extends StatelessWidget {
       _SummaryRow(Icons.eco_rounded,            s.varietiesInUse,   '${stats.varieties.length}',     AppColors.canopy),
       _SummaryRow(Icons.house_siding_rounded,   s.activeGh, '${stats.activeGreenhouses}',   AppColors.info),
       _SummaryRow(Icons.warning_amber_rounded,  s.inactiveLabel,           '${stats.inactiveGreenhouses}', stats.inactiveGreenhouses > 0 ? AppColors.warning : AppColors.muted),
-      _SummaryRow(Icons.straighten_rounded,     'Total area',
+      _SummaryRow(Icons.straighten_rounded,     s.totalArea,
           stats.totalAreaM2 > 0 ? '${stats.totalAreaM2.toStringAsFixed(0)} m²' : '—', AppColors.graphite),
     ];
 
@@ -204,7 +204,7 @@ class _ReportSummaryCard extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
               child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('View full reports', style: AppTextStyles.body.copyWith(
+                Text(s.viewFullReports, style: AppTextStyles.body.copyWith(
                     color: AppColors.leaf, fontWeight: FontWeight.w600)),
                 const SizedBox(width: 4),
                 const Icon(Icons.arrow_forward_rounded, size: 14, color: AppColors.leaf),
@@ -273,9 +273,9 @@ class _Greeting extends StatelessWidget {
 
   String _tod() {
     final h = DateTime.now().hour;
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
+    if (h < 12) return s.goodMorning;
+    if (h < 17) return s.goodAfternoon;
+    return s.goodEvening;
   }
 
   @override
@@ -534,7 +534,7 @@ class _EmptyFarmsCard extends StatelessWidget {
     child: Column(children: [
       const Icon(Icons.agriculture_outlined, size: 40, color: AppColors.muted),
       const SizedBox(height: AppSizes.spaceMd),
-      Text('No farms yet', style: AppTextStyles.title),
+      Text(s.noFarmsYet, style: AppTextStyles.title),
       const SizedBox(height: 4),
       Text(s.noFarmsDesc,
           style: AppTextStyles.caption, textAlign: TextAlign.center),
@@ -551,7 +551,7 @@ class _ErrorState extends StatelessWidget {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         const Icon(Icons.error_outline_rounded, size: 40, color: AppColors.critical),
         const SizedBox(height: AppSizes.spaceMd),
-        Text('Could not load dashboard', style: AppTextStyles.title),
+        Text(s.couldNotLoad, style: AppTextStyles.title),
         const SizedBox(height: 4),
         Text(message, style: AppTextStyles.caption, textAlign: TextAlign.center),
       ]),

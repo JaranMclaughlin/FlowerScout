@@ -1,0 +1,68 @@
+28: 
+29:   factory InspectionRecord.fromRow(Map<String, dynamic> r) {
+30:     final raw = r['submitted_at'] as String? ?? r['started_at'] as String? ?? '';
+31:     DateTime dt = DateTime.now();
+32:     String label = '';
+33:     if (raw.isNotEmpty) {
+34:       final parsed = DateTime.tryParse(raw);
+35:       if (parsed != null) {
+36:         dt = parsed;
+37:         final months = AppStrings.of(lang).monthsShort;
+38:         label = '${dt.day.toString().padLeft(2,'0')} ${months[dt.month-1]} ${dt.year}';
+39:       }
+40:     }
+41:     final findings = r['inspection_findings'] as List?;
+42:     final topCat = findings != null && findings.isNotEmpty
+43:         ? (findings.first['category'] as String? ?? 'Other') : 'Other';
+44:     final topSev = findings != null && findings.isNotEmpty
+45:         ? (findings.first['severity'] as String? ?? 'Low') : 'Low';
+46:     final scoutId = r['scout_id']?.toString() ?? '';
+47:     return InspectionRecord(
+48:       id: r['id']?.toString() ?? '',
+49:       dateTime: dt,
+50:       dateLabel: label,
+51:       gh: r['greenhouse_code'] as String? ?? r['greenhouse_id']?.toString() ?? '—',
+52:       variety: r['variety_name'] as String? ?? '—',
+53:       category: topCat,
+54:       severity: topSev,
+55:       inspectorId: scoutId.length >= 8 ? scoutId.substring(0, 8) : scoutId,
+56:     );
+57:   }
+58: }
+59: 
+60: class GreenhouseRank {
+61:   final String gh;
+62:   final int findings;
+63:   final String topIssue;
+64:   const GreenhouseRank(this.gh, this.findings, this.topIssue);
+65: }
+66: 
+67: class ReportStats {
+68:   final int total, disease, pest, critical;
+69:   final Map<String, int> byCategory, bySeverity;
+70:   final List<GreenhouseRank> topGreenhouses;
+71:   final List<double> trendDisease, trendPest, trendWater;
+72:   final List<String> chartLabels;
+73: 
+74:   const ReportStats({
+75:     required this.total, required this.disease, required this.pest,
+76:     required this.critical, required this.byCategory, required this.bySeverity,
+77:     required this.topGreenhouses, required this.trendDisease,
+78:     required this.trendPest, required this.trendWater, required this.chartLabels,
+79:   });
+80: 
+81:   static ReportStats empty() => const ReportStats(
+82:     total: 0, disease: 0, pest: 0, critical: 0,
+83:     byCategory: {}, bySeverity: {}, topGreenhouses: [],
+84:     trendDisease: [0,0,0,0,0,0,0], trendPest: [0,0,0,0,0,0,0],
+85:     trendWater: [0,0,0,0,0,0,0],
+86:     chartLabels: AppStrings.of(lang).chartLabelsWeek,
+87:   );
+88: 
+89:   factory ReportStats.fromInspections(
+90:     List<InspectionRecord> ins, String period, DateTime since,
+91:   ) {
+92:     int disease = 0, pest = 0, critical = 0;
+93:     final byCategory = <String, int>{};
+94:     final bySeverity = <String, int>{};
+95:     final byGh = <String, Map<String, int>>{};

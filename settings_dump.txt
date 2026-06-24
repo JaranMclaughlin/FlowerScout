@@ -1,0 +1,50 @@
+122: // ── Wide layout ───────────────────────────────────────────────────────────
+123: Widget _wideLayout() => Row(children: [
+124: _buildRail(),
+125: const VerticalDivider(thickness: 0.5, width: 0.5, color: _C.divider),
+126: Expanded(child: _buildContent(true)),
+127: ]);
+129: Widget _buildRail() => Container(
+130: width: 200,
+131: color: _C.paper,
+132: child: Column(
+133: crossAxisAlignment: CrossAxisAlignment.start,
+134: children: [
+135: const Padding(
+136: padding: EdgeInsets.fromLTRB(20, 28, 20, 16),
+137: child: Text('Settings', style: TextStyle(fontFamily: 'Georgia',
+138: fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
+139: ),
+140: const Divider(height: 0.5, thickness: 0.5, color: _C.divider),
+141: const SizedBox(height: 8),
+142: ..._visibleTabs().map(_railItem),
+143: const Spacer(),
+144: Padding(padding: const EdgeInsets.all(16), child: _versionBadge()),
+145: ],
+146: ),
+147: );
+149: Widget _railItem(_Tab tab) {
+150: final active = _activeTab == tab;
+151: final meta = _tabMeta(tab);
+152: return GestureDetector(
+153: onTap: () => setState(() => _activeTab = tab),
+154: child: AnimatedContainer(
+155: duration: const Duration(milliseconds: 180),
+156: margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+157: padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+158: decoration: BoxDecoration(
+159: color: active ? _C.leaf.withValues(alpha: 0.1) : Colors.transparent,
+160: borderRadius: BorderRadius.circular(12),
+161: border: Border(left: BorderSide(
+162: color: active ? _C.leaf : Colors.transparent, width: 3)),
+163: ),
+164: child: Row(children: [
+165: Icon(meta.icon, size: 18, color: active ? _C.leaf : _C.slate),
+166: const SizedBox(width: 10),
+167: Text(meta.label, style: _T.body.copyWith(
+168: color: active ? _C.forest : _C.slate,
+169: fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+170: )),
+171: ]),
+172: ),
+173: );

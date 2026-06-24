@@ -1,0 +1,10 @@
+
+=== lib\features\reports\presentation\reports_screen.dart ===
+  94: chartLabels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], // default; overridden at runtime
+  173: else { labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; n=7; }
+
+=== lib\shared\providers\analytics_data.dart ===
+  36: const months = ['Jan','Feb','Mar','Apr','May','Jun',
+  37: 'Jul','Aug','Sep','Oct','Nov','Dec'];
+  86: chartLabels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+  141: labels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; n = 7;

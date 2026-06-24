@@ -1,0 +1,56 @@
+11: class DashboardScreen extends ConsumerWidget {
+15: Widget build(BuildContext context, WidgetRef ref) {
+48: Text(s.farmOverview, style: AppTextStyles.heading),
+70: class _WideBody extends StatelessWidget {
+74: const _WideBody({required this.farms, required this.stats, required this.ref});
+77: Widget build(BuildContext context) {
+87: Text(s.farms, style: AppTextStyles.heading),
+103: Text(s.quickActions, style: AppTextStyles.heading),
+107: Text(s.reportSummary, style: AppTextStyles.heading),
+119: class _NarrowBody extends StatelessWidget {
+123: const _NarrowBody({required this.farms, required this.stats, required this.ref});
+126: Widget build(BuildContext context) {
+150: class _ReportSummaryCard extends StatelessWidget {
+156: Widget build(BuildContext context) {
+158: _SummaryRow(Icons.local_florist_rounded, s.totalPlants,       '${stats.totalPlants}',          AppCo
+159: _SummaryRow(Icons.eco_rounded,            s.varietiesInUse,   '${stats.varieties.length}',     AppCo
+160: _SummaryRow(Icons.house_siding_rounded,   s.activeGh, '${stats.activeGreenhouses}',   AppColors.info
+161: _SummaryRow(Icons.warning_amber_rounded,  s.inactiveLabel,           '${stats.inactiveGreenhouses}',
+163: stats.totalAreaM2 > 0 ? '${stats.totalAreaM2.toStringAsFixed(0)} m²' : '—', AppColors.graphite),
+216: class _SummaryRow {
+224: class _DashboardStats {
+231: required this.totalFarms, required this.totalGreenhouses,
+232: required this.activeGreenhouses, required this.inactiveGreenhouses,
+233: required this.totalPlantings, required this.totalPlants,
+234: required this.totalAreaM2, required this.varieties,
+266: class _Greeting extends StatelessWidget {
+278: Widget build(BuildContext context) => Text(
+285: class _HealthCard extends StatelessWidget {
+290: Widget build(BuildContext context) {
+292: final label = score >= 80 ? s.excellentCond
+309: Text(s.ghActivation,
+315: Text('$label · ${stats.activeGreenhouses}/${stats.totalGreenhouses} ${s.activeGh}',
+323: class _StatsGrid extends StatelessWidget {
+328: Widget build(BuildContext context) {
+330: _StatCardData(s.farms,       '${stats.totalFarms}',       Icons.agriculture_rounded,    AppColors.le
+331: _StatCardData(s.greenhouses, '${stats.totalGreenhouses}', Icons.house_siding_rounded,   AppColors.in
+332: _StatCardData(s.plantings,   '${stats.totalPlantings}',   Icons.local_florist_rounded,  AppColors.ca
+333: _StatCardData(s.varieties,   '${stats.varieties.length}', Icons.eco_rounded,            AppColors.nu
+348: class _StatCardData {
+355: class _StatCard extends StatelessWidget {
+360: Widget build(BuildContext context) => Container(
+386: class _QuickActions extends ConsumerWidget {
+390: Widget build(BuildContext context, WidgetRef ref) {
+392: (Icons.add_circle_outline_rounded, s.newReport, 1),
+393: (Icons.map_outlined,               s.openMaps,  2),
+398: final isPrimary = a.$2 == s.newReport;
+429: class _FarmTile extends StatelessWidget {
+431: const _FarmTile({required this.farm});
+434: Widget build(BuildContext context) {
+486: child: Text(pct >= 0.8 ? s.active : s.check,
+503: child: Text('${g.code} ${s.inactive}', style: TextStyle(fontSize: 11,
+514: class _EmptyFarmsCard extends StatelessWidget {
+517: Widget build(BuildContext context) => Container(
+530: Text(s.noFarmsDesc,
+536: class _ErrorState extends StatelessWidget {
+540: Widget build(BuildContext context) => Center(

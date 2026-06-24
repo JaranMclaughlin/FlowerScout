@@ -1,0 +1,55 @@
+﻿import pathlib
+
+p = pathlib.Path('lib/features/settings/presentation/settings_screen.dart')
+txt = p.read_text(encoding='utf-8')
+
+txt = txt.replace("'Loading farms...'", "s.loadingFarms")
+txt = txt.replace("'No farms assigned to your account.'", "s.noFarmsAssigned")
+txt = txt.replace("'Inspection interval'", "s.inspectionInterval")
+txt = txt.replace("'Days between required greenhouse checks'", "s.inspectionIntervalDesc")
+txt = txt.replace("'Refresh data'", "s.refreshData")
+txt = txt.replace("'Pull latest farm data from server'", "s.refreshDataDesc")
+txt = txt.replace("'Loading team...'", "s.loadingTeam")
+txt = txt.replace("'No team members found.'", "s.noTeamMembers")
+txt = txt.replace("'Send invite'", "s.sendInvite")
+txt = txt.replace("'Not set'", "s.notSet")
+txt = txt.replace("'App preferences'", "s.appPreferences")
+txt = txt.replace("'System default'", "s.systemDefault")
+txt = txt.replace("'Sign out'", "s.signOutLabel")
+txt = txt.replace("'Save preferences'", "s.savePreferences")
+txt = txt.replace("'Sign out?'", "s.signOutQ")
+
+p.write_text(txt, encoding='utf-8')
+print('settings done')
+
+# Fix dashboard
+p2 = pathlib.Path('lib/features/dashboard/presentation/dashboard_screen.dart')
+txt2 = p2.read_text(encoding='utf-8')
+txt2 = txt2.replace("'Quick Actions'", "s.quickActions")
+txt2 = txt2.replace("'Report Summary'", "s.reportSummary")
+txt2 = txt2.replace("'Total area'", "s.totalArea")
+txt2 = txt2.replace("'View full reports'", "s.viewFullReports")
+txt2 = txt2.replace("'Good morning'", "s.goodMorning")
+txt2 = txt2.replace("'Good afternoon'", "s.goodAfternoon")
+txt2 = txt2.replace("'Good evening'", "s.goodEvening")
+txt2 = txt2.replace("'No farms yet'", "s.noFarmsYet")
+txt2 = txt2.replace("'Could not load dashboard'", "s.couldNotLoad")
+p2.write_text(txt2, encoding='utf-8')
+print('dashboard done')
+
+# Fix reports
+p3 = pathlib.Path('lib/features/reports/presentation/reports_screen.dart')
+txt3 = p3.read_text(encoding='utf-8')
+txt3 = txt3.replace("'All Farms'", "s.allFarms")
+txt3 = txt3.replace("'By category over period'", "s.findingsTrendSub")
+p3.write_text(txt3, encoding='utf-8')
+print('reports done')
+
+# Fix maps remaining
+p4 = pathlib.Path('lib/features/maps/presentation/maps_screen.dart')
+txt4 = p4.read_text(encoding='utf-8')
+txt4 = txt4.replace("'Could not load live scouts'", "s.couldNotLoadLive")
+txt4 = txt4.replace("'No scouts are currently out scouting'", "s.noScoutsOut")
+txt4 = txt4.replace("'Could not load trail'", "s.couldNotLoadTrail")
+p4.write_text(txt4, encoding='utf-8')
+print('maps done')

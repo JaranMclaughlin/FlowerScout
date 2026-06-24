@@ -1,0 +1,17 @@
+49:   Widget build(BuildContext context) {
+50:     final s = ref.watch(stringsProvider);
+107:   Widget _buildHeader(List<FarmModel> farms) {
+163:   Widget _filterPill(String label, String value, List<String> items,
+185:   Widget _buildKpiRow(ReportStats stats) {
+207:   Widget _kpiCard(String label, int value, IconData icon, Color color, Color bg) {
+233:   Widget _buildChartCard(ReportStats stats) {
+256:   Widget _segmented(AppStrings s) => Row(children: [s.barLabel, s.lineLabel].map((t) {
+273:   Widget _legend(AppStrings s) => Wrap(spacing: 16, children: [
+279:   Widget _barChart(ReportStats d) {
+306:   Widget _lineChart(ReportStats d) {
+335:   Widget _buildSeverityCard(ReportStats stats) {
+375:   Widget _buildTopGhCard(ReportStats stats) {
+403:   Widget _buildCategoryCard(ReportStats stats) {
+438:   Widget _buildSkeleton() => const Padding(
+443:   Widget _buildError(String message) => Padding(
+454:   Widget build(BuildContext context) {

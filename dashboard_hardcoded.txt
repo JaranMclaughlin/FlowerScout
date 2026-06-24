@@ -1,0 +1,45 @@
+31: final stats    = _DashboardStats.fromFarms(farms);
+46: Text('Farm Overview', style: AppTextStyles.heading),
+85: Text('Farms', style: AppTextStyles.heading),
+88: const _EmptyFarmsCard()
+101: Text('Quick Actions', style: AppTextStyles.heading),
+105: Text('Report Summary', style: AppTextStyles.heading),
+128: Text('Quick Actions', style: AppTextStyles.heading),
+132: Text('Report Summary', style: AppTextStyles.heading),
+136: Text('Farms', style: AppTextStyles.heading),
+139: const _EmptyFarmsCard()
+156: _SummaryRow(Icons.local_florist_rounded, 'Total plants',       '${stats.totalPlants}',          AppColors.leaf),
+157: _SummaryRow(Icons.eco_rounded,            'Varieties in use',   '${stats.varieties.length}',     AppColors.canopy),
+158: _SummaryRow(Icons.house_siding_rounded,   'Active greenhouses', '${stats.activeGreenhouses}',   AppColors.info),
+159: _SummaryRow(Icons.warning_amber_rounded,  'Inactive',           '${stats.inactiveGreenhouses}', stats.inactiveGreenhouse
+223: final int totalFarms, totalGreenhouses, activeGreenhouses,
+224: inactiveGreenhouses, totalPlantings, totalPlants;
+229: required this.totalFarms, required this.totalGreenhouses,
+230: required this.activeGreenhouses, required this.inactiveGreenhouses,
+231: required this.totalPlantings, required this.totalPlants,
+235: factory _DashboardStats.fromFarms(List<FarmModel> farms) {
+242: if (g.isActive) active++;
+252: totalFarms: farms.length, totalGreenhouses: gh,
+253: activeGreenhouses: active, inactiveGreenhouses: gh - active,
+254: totalPlantings: plantings, totalPlants: plants,
+259: int get healthScore => totalGreenhouses == 0
+260: ? 0 : ((activeGreenhouses / totalGreenhouses) * 100).round();
+290: final label = score >= 80 ? 'Excellent condition'
+307: Text('Greenhouse Activation',
+313: Text('$label · ${stats.activeGreenhouses}/${stats.totalGreenhouses} greenhouses active',
+328: _StatCardData('Farms',       '${stats.totalFarms}',       Icons.agriculture_rounded,    AppColors.leaf),
+329: _StatCardData('Greenhouses', '${stats.totalGreenhouses}', Icons.house_siding_rounded,   AppColors.info),
+330: _StatCardData('Plantings',   '${stats.totalPlantings}',   Icons.local_florist_rounded,  AppColors.canopy),
+331: _StatCardData('Varieties',   '${stats.varieties.length}', Icons.eco_rounded,            AppColors.nutrition),
+390: (Icons.add_circle_outline_rounded, 'New Report', 1),
+391: (Icons.map_outlined,               'Open Maps',  2),
+396: final isPrimary = a.$2 == 'New Report';
+434: final activeCount = farm.greenhouses.where((g) => g.isActive).length;
+435: final inactiveGh = farm.greenhouses.where((g) => !g.isActive).toList();
+484: child: Text(pct >= 0.8 ? 'Active' : 'Check',
+490: if (inactiveGh.isNotEmpty) ...[
+495: children: inactiveGh.map((g) => Container(
+501: child: Text('${g.code} inactive', style: TextStyle(fontSize: 11,
+512: class _EmptyFarmsCard extends StatelessWidget {
+513: const _EmptyFarmsCard();
+528: Text('Farms you have access to will appear here.',

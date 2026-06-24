@@ -1,3 +1,9 @@
+﻿import pathlib, os
+
+files = {}
+
+# ── 1. app_strings.dart ────────────────────────────────────────────────────
+files['lib/shared/l10n/app_strings.dart'] = r"""
 class AppStrings {
   final String languageCode;
   const AppStrings._(this.languageCode);
@@ -230,101 +236,48 @@ class AppStrings {
   String get viewer             => _t('Viewer',             'Mtazamaji');
   String get systemAdmin        => _t('System Admin',       'Msimamizi Mkuu');
 
-
-  // ── Months ────────────────────────────────────────────────────────────────
-  List<String> get monthsShort => languageCode=='sw'
-    ? ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ago','Sep','Okt','Nov','Des']
-    : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-
-  // ── Chart labels ──────────────────────────────────────────────────────────
-  List<String> get chartLabelsToday   => languageCode=='sw'
-    ? ['6as','8as','10as','12ch','2mch','4jio','6jio']
-    : ['6am','8am','10am','12pm','2pm','4pm','6pm'];
-  List<String> get chartLabels30Days  => ['W1','W2','W3','W4','W5'];
-  List<String> get chartLabels3Months => languageCode=='sw'
-    ? ['M1','M2','M3'] : ['M1','M2','M3'];
-  List<String> get chartLabelsWeek    => languageCode=='sw'
-    ? ['Jumatatu','Jumanne','Jumatano','Alhamisi','Ijumaa','Jumamosi','Jumapili']
-    : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-
-  // Full day names
-  List<String> get weekdaysFull => languageCode=='sw'
-    ? ['Jumatatu','Jumanne','Jumatano','Alhamisi','Ijumaa','Jumamosi','Jumapili']
-    : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
-
-  // Full month names
-  List<String> get monthsFull => languageCode=='sw'
-    ? ['Januari','Februari','Machi','Aprili','Mei','Juni','Julai','Agosti','Septemba','Oktoba','Novemba','Desemba']
-    : ['January','February','March','April','May','June','July','August','September','October','November','December'];
-
-  // ── Table headers ─────────────────────────────────────────────────────────
-  String get colDate      => _t('Date',     'Tarehe');
-  String get colGh        => _t('GH',       'Chafu');
-  String get colVariety   => _t('Variety',  'Aina');
-  String get colCategory  => _t('Category', 'Kategoria');
-  String get colSeverity  => _t('Severity', 'Ukali');
-
-  // ── UI actions ────────────────────────────────────────────────────────────
-  String get showAll      => _t('Show all', 'Onyesha yote');
-  String get showLess     => _t('Show less','Onyesha kidogo');
-  String get loadMore     => _t('Load more','Pakia zaidi');
-  String get noData       => _t('No data',  'Hakuna data');
-
-  // ── Analytics screen ──────────────────────────────────────────────────────
-  String get analytics         => _t('Analytics',                    'Uchambuzi');
-  String get analyticsSubtitle => _t('Farm-wide performance and trends','Utendaji na mwenendo wa shamba');
-  String get period            => _t('Period',                       'Kipindi');
-  String get farmFilter        => _t('Farm',                         'Shamba');
-  String get findingsTrendSub  => _t('By category over period',      'Kwa kategoria kwa kipindi');
-  String get diseaseLegend     => _t('Disease',  'Ugonjwa');
-  String get pestsLegend       => _t('Pests',    'Wadudu');
-  String get waterLegend       => _t('Water',    'Maji');
-  String get criticalLabel     => _t('Critical', 'Muhimu');
-  String get highLabel         => _t('High',     'Juu');
-  String get mediumLabel       => _t('Medium',   'Wastani');
-  String get lowLabel          => _t('Low',      'Chini');
-  String get barLabel          => _t('Bar',      'Mhimili');
-  String get lineLabel         => _t('Line',     'Mstari');
-  String get topGreenhouses    => _t('Top Greenhouses',      'Vyumba vya Juu');
-  String get findingsByCategory=> _t('Findings by Category', 'Matokeo kwa Kategoria');
-
-  // ── Settings hardcoded ────────────────────────────────────────────────────
-  String get farmGhConfigTitle => _t('Farm & greenhouse config',  'Usanidi wa Shamba na Chafu');
-  String get controlNotif      => _t('Control when and how FlowerScout notifies you.', 'Dhibiti wakati na jinsi FlowerScout inavyokutaarifu.');
-  String get personaliseDesc   => _t('Personalise how FlowerScout looks and behaves.', 'Personalisha jinsi FlowerScout inavyoonekana na kutenda.');
-  String get versionLabel      => _t('Version 1.0.0 · Flutter',   'Toleo 1.0.0 · Flutter');
-  String get logOut            => _t('Log out of FlowerScout',     'Toka kwenye FlowerScout');
-  String get themeSystem       => _t('System default', 'Chaguo-msingi la mfumo');
-  String get themeLight        => _t('Light',  'Mwanga');
-  String get themeDark         => _t('Dark',   'Giza');
-  String get mapSatellite      => _t('Satellite', 'Setilaiti');
-  String get mapTerrain        => _t('Terrain',   'Ardhi');
-  String get mapStreet         => _t('Street',    'Mtaa');
-  String get dateFmtDMY        => _t('DD/MM/YYYY',      'DD/MM/YYYY');
-  String get dateFmtMDY        => _t('MM/DD/YYYY',      'MM/DD/YYYY');
-  String get dateFmtISO        => _t('YYYY-MM-DD (ISO)','YYYY-MM-DD (ISO)');
-  String get roleScout         => _t('Scout',   'Mkaguzi');
-  String get roleViewer        => _t('Viewer',  'Mtazamaji');
-  String get roleManager       => _t('Manager', 'Msimamizi');
-  String get weeklyDescFull    => _t('Every Monday 7 AM – farm health digest', 'Kila Jumatatu saa 1 asubuhi – muhtasari wa afya ya shamba');
-  String get showHeatmapDesc   => _t('Auto-display scouting heatmap when opening Maps', 'Onyesha ramani ya ukaguzi moja kwa moja unapofungua Ramani');
-
   String _t(String en, String sw) => languageCode == 'sw' ? sw : en;
-
-  // ── Reports extra ────────────────────────────────────────────────────────
-  String get today           => _t('Today',          'Leo');
-  String get last7Days       => _t('Last 7 Days',    'Siku 7 Zilizopita');
-  String get last30Days      => _t('Last 30 Days',   'Siku 30 Zilizopita');
-  String get last3Months     => _t('Last 3 Months',  'Miezi 3 Iliyopita');
-  String get allGreenhouses  => _t('All Greenhouses','Vyumba Vyote');
-  String get allVarieties    => _t('All Varieties',  'Aina Zote');
-  String get loadingReports  => _t('Loading reports...','Inapakia ripoti...');
-  String get noReportsYet    => _t('No inspections found for this period.','Hakuna ukaguzi kwa kipindi hiki.');
-  String get errorLoadReports=> _t('Could not load reports','Ripoti hazijapakia');
-  String get exportPdfDesc   => _t('A PDF report will be generated for the current filters.','Ripoti ya PDF itatengenezwa kwa vichujio vya sasa.');
-  String get exportExcelDesc => _t('An Excel file with all inspection data will be saved.','Faili la Excel lenye data yote litahifadhiwa.');
-  String get waterStressShort=> _t('Water Stress','Msongo wa Maji');
-  String get openingInspect  => _t('Opening inspection...','Inafungua ukaguzi...');
-  String get signOutQ        => _t('Sign out?','Toka?');
-
 }
+""".lstrip()
+
+# ── 2. locale_provider.dart ───────────────────────────────────────────────
+files['lib/shared/providers/locale_provider.dart'] = r"""
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../l10n/app_strings.dart';
+
+const _kLangKey = 'app_language';
+
+class LocaleNotifier extends Notifier<String> {
+  @override
+  String build() {
+    // Load persisted value; default to English
+    final prefs = ref.watch(sharedPrefsProvider).value;
+    return prefs?.getString(_kLangKey) ?? 'en';
+  }
+
+  Future<void> setLanguage(String code) async {
+    state = code;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kLangKey, code);
+  }
+}
+
+final localeProvider = NotifierProvider<LocaleNotifier, String>(
+  LocaleNotifier.new,
+);
+
+/// Convenience: get the AppStrings object for the current language
+final stringsProvider = Provider<AppStrings>((ref) {
+  final code = ref.watch(localeProvider);
+  return AppStrings.of(code);
+});
+""".lstrip()
+
+for path, content in files.items():
+    pathlib.Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with open(path, 'w', encoding='utf-8') as f:
+        f.write(content)
+    print('Written:', path)
+
+print('All done.')

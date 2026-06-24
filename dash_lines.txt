@@ -1,0 +1,16 @@
+88:             children: [
+96:           ),
+140:         const SizedBox(height: AppSizes.space2xl),
+148:     );
+153: class _ReportSummaryCard extends StatelessWidget {
+160:   Widget build(BuildContext context) {
+288: // ── Health card ──────────────────────────────────────────────────────────────
+296:     final score = stats.healthScore;
+327: // ── Stats grid ───────────────────────────────────────────────────────────────
+335:     final cards = [
+394: 
+402:     return Wrap(spacing: AppSizes.spaceSm, runSpacing: AppSizes.spaceSm,
+434: // ── Farm tile ─────────────────────────────────────────────────────────────────
+442:     final ghCount    = farm.greenhouses.length;
+516:     );
+524:   @override

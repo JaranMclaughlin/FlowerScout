@@ -1,0 +1,14 @@
+185:   Widget _buildTopBar() => Container(
+186:     color: _C.paper,
+187:     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+188:       const Padding(
+189:         padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
+190: child: Text(s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
+191:             fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
+192:       ),
+193:       SingleChildScrollView(
+194:         scrollDirection: Axis.horizontal,
+195:         padding: const EdgeInsets.symmetric(horizontal: 16),
+196:         child: Row(children: _visibleTabs().map(_topBarChip).toList()),
+197:       ),
+198:       const Divider(height: 0.5, thickness: 0.5, color: _C.divider),

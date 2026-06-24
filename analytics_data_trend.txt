@@ -1,0 +1,80 @@
+96: 
+97:     for (final r in ins) {
+98:       final cat = r.category.toLowerCase();
+99:       final sev = r.severity.toLowerCase();
+100:       if (cat.contains('disease')) disease++;
+101:       if (cat.contains('pest')) pest++;
+102:       if (sev == 'critical') critical++;
+103:       byCategory[r.category] = (byCategory[r.category] ?? 0) + 1;
+104:       bySeverity[r.severity] = (bySeverity[r.severity] ?? 0) + 1;
+105:       byGh.putIfAbsent(r.gh, () => {});
+106:       byGh[r.gh]![r.category] = (byGh[r.gh]![r.category] ?? 0) + 1;
+107:     }
+108: 
+109:     final topGh = byGh.entries.map((e) {
+110:       final tot = e.value.values.fold(0, (a, b) => a + b);
+111:       final top = e.value.entries.reduce((a, b) => a.value >= b.value ? a : b);
+112:       return GreenhouseRank(e.key, tot, top.key);
+113:     }).toList()
+114:       ..sort((a, b) => b.findings.compareTo(a.findings));
+115: 
+116:     final buckets = _buildTrend(ins, period, since);
+117: 
+118:     return ReportStats(
+119:       total: ins.length, disease: disease, pest: pest, critical: critical,
+120:       byCategory: byCategory, bySeverity: bySeverity,
+121:       topGreenhouses: topGh.take(5).toList(),
+122:       trendDisease: List<double>.from(buckets['disease']!),
+123:       trendPest: List<double>.from(buckets['pest']!),
+124:       trendWater: List<double>.from(buckets['water']!),
+125:       chartLabels: List<String>.from(buckets['labels']!),
+126:     );
+127:   }
+128: 
+129:   static Map<String, List<dynamic>> _buildTrend(
+130:     List<InspectionRecord> ins, String period, DateTime since,
+131:   ) {
+132:     late List<String> labels;
+133:     late int n;
+134:     if (period == 'today') {
+135:       labels = ['6am','8am','10am','12pm','2pm','4pm','6pm']; n = 7;
+136:     } else if (period == '30days') {
+137:       labels = ['W1','W2','W3','W4','W5']; n = 5;
+138:     } else if (period == '3months') {
+139:       labels = ['M1','M2','M3']; n = 3;
+140:     } else {
+141:       labels = AppStrings.of(lang).chartLabelsWeek; n = 7;
+142:     }
+143: 
+144:     final d = List<double>.filled(n, 0.0);
+145:     final p = List<double>.filled(n, 0.0);
+146:     final w = List<double>.filled(n, 0.0);
+147: 
+148:     for (final r in ins) {
+149:       int idx;
+150:       if (period == 'today') {
+151:         idx = ((r.dateTime.hour - 6) / 2).floor().clamp(0, n - 1);
+152:       } else if (period == '30days') {
+153:         final days = r.dateTime.difference(since).inDays;
+154:         idx = (days / 7).floor().clamp(0, n - 1);
+155:       } else if (period == '3months') {
+156:         final days = r.dateTime.difference(since).inDays;
+157:         idx = (days / 30).floor().clamp(0, n - 1);
+158:       } else {
+159:         idx = (r.dateTime.weekday - 1).clamp(0, n - 1);
+160:       }
+161:       final cat = r.category.toLowerCase();
+162:       if (cat.contains('disease')) {
+163:         d[idx]++;
+164:       } else if (cat.contains('pest')) {
+165:         p[idx]++;
+166:       } else if (cat.contains('water')) {
+167:         w[idx]++;
+168:       }
+169:     }
+170:     return {'disease': d, 'pest': p, 'water': w, 'labels': labels};
+171:   }
+172: }
+173: 
+174: class AnalyticsFilter {
+175:   final String period;

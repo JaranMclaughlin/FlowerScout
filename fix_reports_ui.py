@@ -1,4 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import pathlib
+
+reports = r"""import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -33,23 +35,20 @@ class _P {
 // ── Data models ───────────────────────────────────────────────────────────────
 class _Inspection {
   final String id, date, gh, variety, category, severity, inspectorId;
-  final DateTime dateTime;
   const _Inspection({
     required this.id, required this.date, required this.gh,
     required this.variety, required this.category,
     required this.severity, required this.inspectorId,
-    required this.dateTime,
   });
 
-  factory _Inspection.fromRow(Map<String, dynamic> r, {String lang='en'}) {
+  factory _Inspection.fromRow(Map<String, dynamic> r) {
     final raw = r['submitted_at'] as String? ?? r['started_at'] as String? ?? '';
     String date = '';
-    DateTime parsedDateTime = DateTime.now();
     if (raw.isNotEmpty) {
       final dt = DateTime.tryParse(raw);
       if (dt != null) {
-        parsedDateTime = dt;
-        final months = AppStrings.of(lang).monthsShort;
+        const months = ['Jan','Feb','Mar','Apr','May','Jun',
+                        'Jul','Aug','Sep','Oct','Nov','Dec'];
         date = '${dt.day.toString().padLeft(2,'0')} ${months[dt.month-1]} ${dt.year}';
       }
     }
@@ -62,7 +61,6 @@ class _Inspection {
     return _Inspection(
       id: r['id']?.toString() ?? '',
       date: date,
-      dateTime: parsedDateTime,
       gh: r['greenhouse_code'] as String? ?? r['greenhouse_id']?.toString() ?? '—',
       variety: r['variety_name'] as String? ?? '—',
       category: topCat, severity: topSev,
@@ -93,49 +91,7 @@ class _ReportStats {
     trendWater:[0,0,0,0,0,0,0],
     chartLabels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
   );
-
-  factory _ReportStats.fromRpcJson(Map<String,dynamic> json, String period, {String lang='en'}) {
-    late List<String> labels; late int n;
-    final _s=AppStrings.of(lang);
-    if (period=='today') { labels=_s.chartLabelsToday; n=7; }
-    else if (period=='30days') { labels=_s.chartLabels30Days; n=5; }
-    else if (period=='3months') { labels=_s.chartLabels3Months; n=3; }
-    else { labels=_s.chartLabelsWeek; n=7; }
-
-    final d=List<double>.filled(n,0.0), p=List<double>.filled(n,0.0), w=List<double>.filled(n,0.0);
-    final trendList=json['trend'] as List? ?? [];
-    for (final t in trendList) {
-      final idx=(t['idx'] as num).toInt().clamp(0,n-1);
-      d[idx]=(t['disease'] as num? ?? 0).toDouble();
-      p[idx]=(t['pest'] as num? ?? 0).toDouble();
-      w[idx]=(t['water'] as num? ?? 0).toDouble();
-    }
-
-    final byCatRaw=json['by_category'] as Map<String,dynamic>? ?? {};
-    final byCategory=byCatRaw.map((k,v)=>MapEntry(k,(v as num).toInt()));
-
-    final bySevRaw=json['by_severity'] as Map<String,dynamic>? ?? {};
-    final bySeverity=bySevRaw.map((k,v)=>MapEntry(k,(v as num).toInt()));
-
-    final topGhRaw=json['top_greenhouses'] as List? ?? [];
-    final topGreenhouses=topGhRaw.map((g)=>_GhRank(
-      g['gh'] as String? ?? '—',
-      (g['findings'] as num? ?? 0).toInt(),
-      g['top_issue'] as String? ?? 'Other',
-    )).toList();
-
-    return _ReportStats(
-      total:(json['total'] as num? ?? 0).toInt(),
-      disease:(json['disease'] as num? ?? 0).toInt(),
-      pest:(json['pest'] as num? ?? 0).toInt(),
-      critical:(json['critical'] as num? ?? 0).toInt(),
-      byCategory:byCategory, bySeverity:bySeverity,
-      topGreenhouses:topGreenhouses,
-      trendDisease:d, trendPest:p, trendWater:w,
-      chartLabels:labels,
-    );
-  }
-  factory _ReportStats.fromInspections(List<_Inspection> ins, String period, {String lang='en'}) {
+  factory _ReportStats.fromInspections(List<_Inspection> ins, String period) {
     int disease=0, pest=0, critical=0;
     final byCategory=<String,int>{}, bySeverity=<String,int>{}, byGh=<String,Map<String,int>>{};
     for (final r in ins) {
@@ -153,7 +109,7 @@ class _ReportStats {
       final top=e.value.entries.reduce((a,b)=>a.value>=b.value?a:b);
       return _GhRank(e.key,tot,top.key);
     }).toList()..sort((a,b)=>b.findings.compareTo(a.findings));
-    final buckets=_buildTrend(ins,period,lang);
+    final buckets=_buildTrend(ins,period);
     return _ReportStats(
       total:ins.length, disease:disease, pest:pest, critical:critical,
       byCategory:byCategory, bySeverity:bySeverity,
@@ -164,37 +120,18 @@ class _ReportStats {
       chartLabels:List<String>.from(buckets['labels']!),
     );
   }
-  static Map<String,List<dynamic>> _buildTrend(List<_Inspection> ins, String period, String lang) {
+  static Map<String,List<dynamic>> _buildTrend(List<_Inspection> ins, String period) {
     late List<String> labels; late int n;
-    // chart labels handled in fromRpcJson
     if (period=='today') { labels=['6am','8am','10am','12pm','2pm','4pm','6pm']; n=7; }
     else if (period=='30days') { labels=['W1','W2','W3','W4','W5']; n=5; }
     else if (period=='3months') { labels=['M1','M2','M3']; n=3; }
-    else { labels=AppStrings.of(lang).chartLabelsWeek; n=7; }
-    final now=DateTime.now();
-    late DateTime since;
-    switch(period){
-      case 'today':   since=DateTime(now.year,now.month,now.day); break;
-      case '30days':  since=now.subtract(const Duration(days:30)); break;
-      case '3months': since=now.subtract(const Duration(days:90)); break;
-      default:        since=now.subtract(const Duration(days:7));
-    }
+    else { labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun']; n=7; }
     final d=List<double>.filled(n,0.0), p=List<double>.filled(n,0.0), w=List<double>.filled(n,0.0);
     for (final r in ins) {
-      int idx;
-      if (period=='today') {
-        idx=((r.dateTime.hour-6)/2).floor().clamp(0,n-1);
-      } else if (period=='30days') {
-        idx=(r.dateTime.difference(since).inDays/7).floor().clamp(0,n-1);
-      } else if (period=='3months') {
-        idx=(r.dateTime.difference(since).inDays/30).floor().clamp(0,n-1);
-      } else {
-        idx=(r.dateTime.weekday-1).clamp(0,n-1);
-      }
       final cat=r.category.toLowerCase();
-      if (cat.contains('disease')) { d[idx]++; }
-      else if (cat.contains('pest')) { p[idx]++; }
-      else if (cat.contains('water')) { w[idx]++; }
+      if (cat.contains('disease')) { d[0]++; }
+      else if (cat.contains('pest')) { p[0]++; }
+      else if (cat.contains('water')) { w[0]++; }
     }
     return {'disease':d,'pest':p,'water':w,'labels':labels};
   }
@@ -202,8 +139,7 @@ class _ReportStats {
 
 // ── Fetcher ───────────────────────────────────────────────────────────────────
 Future<List<_Inspection>> _fetchInspections(String period,
-    {String? farmId, String? greenhouseId, String? variety,
-     int offset=0, int limit=50, String lang='en'}) async {
+    {String? farmId, String? greenhouseId, String? variety}) async {
   final db=Supabase.instance.client;
   final now=DateTime.now();
   late DateTime since;
@@ -221,37 +157,16 @@ Future<List<_Inspection>> _fetchInspections(String period,
   if (greenhouseId!=null) { q=q.eq('greenhouse_id',greenhouseId); }
   else if (farmId!=null) { q=q.eq('greenhouses.farm_id',farmId); }
   if (variety!=null) { q=q.eq('variety_name',variety); }
-  final rows=await q.order('submitted_at',ascending:false).range(offset,offset+limit-1);
+  final rows=await q.order('submitted_at',ascending:false).limit(200);
   return (rows as List).map((r){
     final row=Map<String,dynamic>.from(r as Map);
     final gh=row['greenhouses'];
     if (gh is Map) row['greenhouse_code']=gh['code'];
-    return _Inspection.fromRow(row, lang: lang);
+    return _Inspection.fromRow(row);
   }).toList();
 }
 
 // ── Screen ────────────────────────────────────────────────────────────────────
-Future<Map<String,dynamic>> _fetchReportStatsRpc(String period,
-    {String? farmId, String? greenhouseId, String? variety}) async {
-  final db=Supabase.instance.client;
-  final now=DateTime.now();
-  late DateTime since;
-  switch(period){
-    case 'today':   since=DateTime(now.year,now.month,now.day); break;
-    case '30days':  since=now.subtract(const Duration(days:30)); break;
-    case '3months': since=now.subtract(const Duration(days:90)); break;
-    default:        since=now.subtract(const Duration(days:7));
-  }
-  final result=await db.rpc('get_report_stats', params: {
-    'p_since': since.toIso8601String(),
-    'p_farm_id': farmId,
-    'p_greenhouse_id': greenhouseId,
-    'p_variety': variety,
-    'p_period': period,
-  });
-  return result as Map<String,dynamic>;
-}
-
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
   @override ConsumerState<ReportsScreen> createState()=>_ReportsScreenState();
@@ -262,10 +177,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   String? _farmId, _greenhouseId, _variety;
   String _chartType='Bar';
   String _activeFilter='all';
-  bool _showAllInspections=false;
-  bool _loadingMore=false;
-  bool _hasMore=true;
-  static const _pageSize=50;
   List<_Inspection> _inspections=[];
   _ReportStats _stats=_ReportStats.empty();
   bool _loading=true;
@@ -274,37 +185,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   @override void initState(){ super.initState(); _load(); }
 
   Future<void> _load() async {
-    setState((){_loading=true;_error=null;_showAllInspections=false;_hasMore=true;});
+    setState((){_loading=true;_error=null;});
     try {
-      final results=await Future.wait([
-        _fetchInspections(_period,farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety,
-          offset:0,limit:_pageSize,lang:ref.read(localeProvider)),
-        _fetchReportStatsRpc(_period,farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety),
-      ]);
-      final data=results[0] as List<_Inspection>;
-      final statsJson=results[1] as Map<String,dynamic>;
-      if(mounted) setState((){
-        _inspections=data;
-        _hasMore=data.length==_pageSize;
-        _stats=_ReportStats.fromRpcJson(statsJson,_period,lang:ref.read(localeProvider));
-        _loading=false;
-      });
+      final data=await _fetchInspections(_period,
+          farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety);
+      if(mounted) setState((){_inspections=data;_stats=_ReportStats.fromInspections(data,_period);_loading=false;});
     } catch(e){ if(mounted) setState((){_error=e.toString();_loading=false;}); }
-  }
-
-  Future<void> _loadMore() async {
-    if(_loadingMore || !_hasMore) return;
-    setState(()=>_loadingMore=true);
-    try {
-      final more=await _fetchInspections(_period,
-        farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety,
-        offset:_inspections.length,limit:_pageSize,lang:ref.read(localeProvider));
-      if(mounted) setState((){
-        _inspections=[..._inspections,...more];
-        _hasMore=more.length==_pageSize;
-        _loadingMore=false;
-      });
-    } catch(e){ if(mounted) setState(()=>_loadingMore=false); }
   }
 
   List<_Inspection> get _filtered {
@@ -379,7 +265,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 
   // ── Header with filters ──────────────────────────────────────────────────
   Widget _buildHeader(AppStrings s, List<FarmModel> farms) {
-    final farmItems=<String,String?>{s.allFarms:null};
+    final farmItems=<String,String?>{'All Farms':null};
     for(final f in farms) farmItems[f.name]=f.id;
     final ghItems=<String,String?>{'All':null};
     if(_farmId!=null){
@@ -543,7 +429,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Text(s.findingsTrend,
               style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink)),
             const SizedBox(height:2),
-            Text(s.findingsTrendSub,
+            Text('By category over period',
               style:const TextStyle(fontSize:11,color:_P.slate)),
           ])),
           _segmented(),
@@ -666,7 +552,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         const SizedBox(height:16),
         if(total==0)
           Center(child:Padding(padding:const EdgeInsets.all(20),
-            child:Text(s.noData,style:const TextStyle(color:_P.slate,fontSize:13))))
+            child:Text('No data',style:const TextStyle(color:_P.slate,fontSize:13))))
         else
           Row(children:[
             SizedBox(width:100,height:100,child:PieChart(PieChartData(
@@ -716,11 +602,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           return Padding(padding:const EdgeInsets.only(bottom:14),
             child:Row(children:[
               Container(width:22,height:22,
-                decoration:BoxDecoration(color:medals[(rank-1).clamp(0,2)].withValues(alpha:0.15),
+                decoration:BoxDecoration(color:medals[rank-1].withValues(alpha:0.15),
                   shape:BoxShape.circle),
                 child:Center(child:Text('$rank',
                   style:TextStyle(fontSize:10,fontWeight:FontWeight.w800,
-                    color:medals[(rank-1).clamp(0,2)])))),
+                    color:medals[rank-1])))),
               const SizedBox(width:10),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
                 Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
@@ -788,7 +674,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   // ── Inspection table ──────────────────────────────────────────────────────
   Widget _buildInspectionTable(AppStrings s) {
     final rows=_filtered;
-    final displayRows=_showAllInspections?rows:rows.take(5).toList();
     return Container(
       decoration:_card(),
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
@@ -797,7 +682,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             Expanded(child:Text(s.recentInspections,
               style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink))),
             if(_activeFilter!='all')
-              GestureDetector(onTap:()=>setState((){_activeFilter='all';_showAllInspections=false;}),
+              GestureDetector(onTap:()=>setState(()=>_activeFilter='all'),
                 child:Container(
                   padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
                   decoration:BoxDecoration(color:_P.mist,borderRadius:BorderRadius.circular(20)),
@@ -816,109 +701,68 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               const SizedBox(height:8),
               Text(s.noReportsYet,style:const TextStyle(color:_P.slate,fontSize:13)),
             ])))
-        else ...[
-          _buildTableRows(displayRows, s),
-          if(rows.length>5)
-            InkWell(
-              onTap:()=>setState(()=>_showAllInspections=!_showAllInspections),
-              child:Padding(
-                padding:const EdgeInsets.symmetric(vertical:14),
-                child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-                  Text(_showAllInspections?s.showLess:'${s.showAll} (${rows.length})',
-                    style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:_P.forest)),
-                  const SizedBox(width:4),
-                  Icon(_showAllInspections?Icons.keyboard_arrow_up_rounded:Icons.keyboard_arrow_down_rounded,
-                    size:16,color:_P.forest),
-                ]),
-              ),
-            ),
-          if(_showAllInspections && _hasMore && _activeFilter=='all')
-            InkWell(
-              onTap:_loadingMore?null:_loadMore,
-              child:Padding(
-                padding:const EdgeInsets.symmetric(vertical:14),
-                child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
-                  if(_loadingMore)
-                    const SizedBox(width:14,height:14,
-                      child:CircularProgressIndicator(strokeWidth:2,color:_P.forest))
-                  else
-                    Text(s.loadMore,
-                      style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:_P.forest)),
-                ]),
-              ),
-            ),
-        ],
-      ]),
-    );
-  }
-
-
-  Widget _buildTableRows(List<_Inspection> rows, AppStrings s) {
-    final header = Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Row(children: [
-        _th(s.colDate, flex: 2), _th(s.colGh, flex: 1), _th(s.colVariety, flex: 2),
-        _th(s.colCategory, flex: 2), _th(s.colSeverity, flex: 2),
-      ]),
-    );
-    final items = <Widget>[header, const Divider(height: 1, color: _P.divider)];
-    for (int i = 0; i < rows.length; i++) {
-      final r = rows[i];
-      final catColor = _catColor(r.category);
-      final sevColor = _sevColor(r.severity);
-      items.add(Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('${r.date} · ${r.gh} · ${r.variety}'),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          )),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            child: Row(children: [
-              Expanded(flex: 2, child: Text(r.date,
-                style: const TextStyle(fontSize: 12, color: _P.graphite))),
-              Expanded(flex: 1, child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(color: _P.mist, borderRadius: BorderRadius.circular(4)),
-                child: Text(r.gh, style: const TextStyle(fontSize: 11,
-                  fontWeight: FontWeight.w600, color: _P.forest),
-                  overflow: TextOverflow.ellipsis))),
-              Expanded(flex: 2, child: Text(r.variety,
-                style: const TextStyle(fontSize: 12, color: _P.graphite),
-                overflow: TextOverflow.ellipsis)),
-              Expanded(flex: 2, child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: catColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4)),
-                child: Text(r.category, style: TextStyle(fontSize: 10,
-                  fontWeight: FontWeight.w600, color: catColor),
-                  overflow: TextOverflow.ellipsis))),
-              Expanded(flex: 2, child: Row(children: [
-                Container(width: 6, height: 6,
-                  decoration: BoxDecoration(color: sevColor, shape: BoxShape.circle)),
-                const SizedBox(width: 5),
-                Text(r.severity, style: TextStyle(fontSize: 11,
-                  color: sevColor, fontWeight: FontWeight.w600)),
+        else
+          // Table header
+          Column(children:[
+            Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:10),
+              child:Row(children:[
+                _th('Date',flex:2),_th('GH',flex:1),_th('Variety',flex:2),
+                _th('Category',flex:2),_th('Severity',flex:2),
               ])),
-            ]),
-          ),
-        ),
-      ));
-      if (i < rows.length - 1) {
-        items.add(const Divider(height: 1, color: _P.divider, indent: 20, endIndent: 20));
-      }
-    }
-    return Column(children: items);
+            const Divider(height:1,color:_P.divider),
+            ...rows.asMap().entries.map((entry){
+              final i=entry.key; final r=entry.value;
+              final catColor=_catColor(r.category);
+              final sevColor=_sevColor(r.severity);
+              return Column(children:[
+                Material(color:Colors.transparent,
+                  child:InkWell(
+                    onTap:()=>ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                      content:Text('${r.date} · ${r.gh} · ${r.variety}'),
+                      behavior:SnackBarBehavior.floating,
+                      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10)),
+                    )),
+                    child:Padding(padding:const EdgeInsets.symmetric(horizontal:20,vertical:12),
+                      child:Row(children:[
+                        Expanded(flex:2,child:Text(r.date,
+                          style:const TextStyle(fontSize:12,color:_P.graphite))),
+                        Expanded(flex:1,child:Container(
+                          padding:const EdgeInsets.symmetric(horizontal:6,vertical:2),
+                          decoration:BoxDecoration(color:_P.mist,borderRadius:BorderRadius.circular(4)),
+                          child:Text(r.gh,style:const TextStyle(fontSize:11,
+                            fontWeight:FontWeight.w600,color:_P.forest),
+                            overflow:TextOverflow.ellipsis))),
+                        Expanded(flex:2,child:Text(r.variety,
+                          style:const TextStyle(fontSize:12,color:_P.graphite),
+                          overflow:TextOverflow.ellipsis)),
+                        Expanded(flex:2,child:Container(
+                          padding:const EdgeInsets.symmetric(horizontal:7,vertical:3),
+                          decoration:BoxDecoration(
+                            color:catColor.withValues(alpha:0.1),
+                            borderRadius:BorderRadius.circular(4)),
+                          child:Text(r.category,style:TextStyle(fontSize:10,
+                            fontWeight:FontWeight.w600,color:catColor),
+                            overflow:TextOverflow.ellipsis))),
+                        Expanded(flex:2,child:Row(children:[
+                          Container(width:6,height:6,
+                            decoration:BoxDecoration(color:sevColor,shape:BoxShape.circle)),
+                          const SizedBox(width:5),
+                          Text(r.severity,style:TextStyle(fontSize:11,
+                            color:sevColor,fontWeight:FontWeight.w600)),
+                        ])),
+                      ]))),
+                  )),
+                if(i<rows.length-1) const Divider(height:1,color:_P.divider,indent:20,endIndent:20),
+              ]);
+            }),
+          ]),
+      ]),
+    );
   }
 
-  Widget _th(String label, {int flex = 1}) {
-    return Expanded(flex: flex, child: Text(label,
-      style: const TextStyle(fontSize:10, fontWeight:FontWeight.w700,
-        letterSpacing:0.8, color:_P.slate)));
-  }
+  Widget _th(String label,{int flex=1})=>Expanded(flex:flex,child:
+    Text(label,style:const TextStyle(fontSize:10,fontWeight:FontWeight.w700,
+      letterSpacing:0.8,color:_P.slate)));
 
   // ── States ────────────────────────────────────────────────────────────────
   Widget _buildSkeleton()=>Column(children:[
@@ -983,3 +827,7 @@ class _KpiData {
   const _KpiData({required this.id,required this.label,required this.value,
     required this.icon,required this.color,required this.bg});
 }
+"""
+
+pathlib.Path('lib/features/reports/presentation/reports_screen.dart').write_text(reports, encoding='utf-8')
+print('done')

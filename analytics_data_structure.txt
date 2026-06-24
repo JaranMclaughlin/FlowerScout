@@ -1,0 +1,14 @@
+8: class InspectionRecord {
+29: factory InspectionRecord.fromRow(Map<String, dynamic> r) {
+37: final months = AppStrings.of(lang).monthsShort;
+60: class GreenhouseRank {
+67: class ReportStats {
+81: static ReportStats empty() => const ReportStats(
+86: chartLabels: AppStrings.of(lang).chartLabelsWeek,
+89: factory ReportStats.fromInspections(
+129: static Map<String, List<dynamic>> _buildTrend(
+141: labels = AppStrings.of(lang).chartLabelsWeek; n = 7;
+174: class AnalyticsFilter {
+211: Future<List<InspectionRecord>> fetchInspectionRecords(
+244: FutureProvider.family<List<InspectionRecord>, AnalyticsFilter>((ref, filter) async {
+250: FutureProvider.family<ReportStats, AnalyticsFilter>((ref, filter) async {

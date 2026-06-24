@@ -1,0 +1,14 @@
+12: class FindingData {
+19: class _C {
+42: class ScoutingScreen extends ConsumerStatefulWidget {
+48: class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
+81: final s = (_elapsedSeconds % 60).toString().padLeft(2, '0');
+101: final s = ref.read(stringsProvider);
+149: final s = ref.read(stringsProvider);
+172: final s = ref.read(stringsProvider);
+254: content: Text('${ref.read(stringsProvider).failedToSubmit}$e'),
+270: Widget build(BuildContext context) {
+272: final s = ref.watch(stringsProvider);
+586: class _FindingCard extends StatefulWidget {
+604: class _FindingCardState extends State<_FindingCard> {
+634: Widget build(BuildContext context) {

@@ -1,0 +1,117 @@
+--- 150-165 ---
+150: }
+151: 
+152: // ── Report summary card ──────────────────────────────────────────────────────
+153: class _ReportSummaryCard extends StatelessWidget {
+154:   final AppStrings s;
+155:   final _DashboardStats stats;
+156:   final WidgetRef ref;
+157:   const _ReportSummaryCard({required this.stats, required this.ref});
+158: 
+159:   @override
+160:   Widget build(BuildContext context) {
+161:     final rows = [
+162:       _SummaryRow(Icons.local_florist_rounded, s.totalPlants,       '${stats.totalPlants}',          AppColors.leaf),
+163:       _SummaryRow(Icons.eco_rounded,            s.varietiesInUse,   '${stats.varieties.length}',     AppColors.canopy),
+164:       _SummaryRow(Icons.house_siding_rounded,   s.activeGh, '${stats.activeGreenhouses}',   AppColors.info),
+165:       _SummaryRow(Icons.warning_amber_rounded,  s.inactiveLabel,           '${stats.inactiveGreenhouses}', stats.inactiveGreenhouses > 0 ? AppColors.warning : AppColors.muted),
+--- 285-300 ---
+285:   );
+286: }
+287: 
+288: // ── Health card ──────────────────────────────────────────────────────────────
+289: class _HealthCard extends StatelessWidget {
+290:   final AppStrings s;
+291:   final _DashboardStats stats;
+292:   const _HealthCard({required this.stats});
+293: 
+294:   @override
+295:   Widget build(BuildContext context) {
+296:     final score = stats.healthScore;
+297:     final label = score >= 80 ? s.excellentCond
+298:         : score >= 60 ? 'Good condition'
+299:         : score >= 40 ? 'Needs attention'
+300:         : 'Critical — action required';
+--- 325-340 ---
+325: }
+326: 
+327: // ── Stats grid ───────────────────────────────────────────────────────────────
+328: class _StatsGrid extends StatelessWidget {
+329:   final AppStrings s;
+330:   final _DashboardStats stats;
+331:   const _StatsGrid({required this.stats});
+332: 
+333:   @override
+334:   Widget build(BuildContext context) {
+335:     final cards = [
+336:       _StatCardData(s.farms,       '${stats.totalFarms}',       Icons.agriculture_rounded,    AppColors.leaf),
+337:       _StatCardData(s.greenhouses, '${stats.totalGreenhouses}', Icons.house_siding_rounded,   AppColors.info),
+338:       _StatCardData(s.plantings,   '${stats.totalPlantings}',   Icons.local_florist_rounded,  AppColors.canopy),
+339:       _StatCardData(s.varieties,   '${stats.varieties.length}', Icons.eco_rounded,            AppColors.nutrition),
+340:     ];
+--- 388-410 ---
+388:   );
+389: }
+390: 
+391: // ── Quick actions ─────────────────────────────────────────────────────────────
+392: class _QuickActions extends ConsumerWidget {
+393:   const _QuickActions();
+394: 
+395:   @override
+396:   Widget build(BuildContext context, WidgetRef ref) {
+397:     final actions = [
+398:       (Icons.add_circle_outline_rounded, s.newReport, 1),
+399:       (Icons.map_outlined,               s.openMaps,  2),
+400:       (Icons.settings_outlined,          'Settings',   4),
+401:     ];
+402:     return Wrap(spacing: AppSizes.spaceSm, runSpacing: AppSizes.spaceSm,
+403:       children: actions.map((a) {
+404:         final isPrimary = a.$2 == s.newReport;
+405:         return Material(
+406:           color: isPrimary ? AppColors.leaf : AppColors.surface,
+407:           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+408:           child: InkWell(
+409:             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
+410:             onTap: () => ref.read(selectedTabProvider.notifier).set(a.$3),
+--- 430-445 ---
+430:     );
+431:   }
+432: }
+433: 
+434: // ── Farm tile ─────────────────────────────────────────────────────────────────
+435: class _FarmTile extends StatelessWidget {
+436:   final FarmModel farm;
+437:   final AppStrings s;
+438:   const _FarmTile({required this.farm});
+439: 
+440:   @override
+441:   Widget build(BuildContext context) {
+442:     final ghCount    = farm.greenhouses.length;
+443:     final activeCount = farm.greenhouses.where((g) => g.isActive).length;
+444:     final inactiveGh = farm.greenhouses.where((g) => !g.isActive).toList();
+445:     final pct        = ghCount == 0 ? 0.0 : activeCount / ghCount;
+--- 512-535 ---
+512:                   color: AppColors.severityColor('medium'))),
+513:             )).toList()),
+514:         ],
+515:       ]),
+516:     );
+517:   }
+518: }
+519: 
+520: // ── Empty / error states ──────────────────────────────────────────────────────
+521: class _EmptyFarmsCard extends StatelessWidget {
+522:   final AppStrings s;
+523:   const _EmptyFarmsCard({required this.s});
+524:   @override
+525:   Widget build(BuildContext context) => Container(
+526:     width: double.infinity,
+527:     padding: AppSizes.cardPaddingLg,
+528:     decoration: BoxDecoration(
+529:       color: AppColors.surface,
+530:       borderRadius: BorderRadius.circular(AppSizes.radiusLg),
+531:       border: Border.all(color: AppColors.divider),
+532:     ),
+533:     child: Column(children: [
+534:       const Icon(Icons.agriculture_outlined, size: 40, color: AppColors.muted),
+535:       const SizedBox(height: AppSizes.spaceMd),

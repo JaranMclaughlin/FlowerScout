@@ -1,0 +1,336 @@
+lib\main.dart:37: Flower Scout
+lib\features\analytics\presentation\analytics_screen.dart:354: No data
+lib\features\analytics\presentation\analytics_screen.dart:385: No data
+lib\features\analytics\presentation\analytics_screen.dart:415: No data
+lib\features\auth\presentation\location_permission_screen.dart:64: Location blocked
+lib\features\auth\presentation\location_permission_screen.dart:79: Continue anyway
+lib\features\auth\presentation\location_permission_screen.dart:88: Open settings
+lib\features\auth\presentation\location_permission_screen.dart:141: Allow location access
+lib\features\auth\presentation\location_permission_screen.dart:175: Records your walking trail across the farm
+lib\features\auth\presentation\location_permission_screen.dart:179: Tracks which farm zones are covered or missed
+lib\features\auth\presentation\location_permission_screen.dart:187: Powers distance and coverage analytics
+lib\features\auth\presentation\location_permission_screen.dart:213: Allow while using app
+lib\features\auth\presentation\location_permission_screen.dart:237: Not now
+lib\features\dashboard\presentation\dashboard_screen.dart:133: Quick Actions
+lib\features\dashboard\presentation\dashboard_screen.dart:137: Report Summary
+lib\features\dashboard\presentation\dashboard_screen.dart:166: Total area
+lib\features\dashboard\presentation\dashboard_screen.dart:207: View full reports
+lib\features\dashboard\presentation\dashboard_screen.dart:276: Good morning
+lib\features\dashboard\presentation\dashboard_screen.dart:277: Good afternoon
+lib\features\dashboard\presentation\dashboard_screen.dart:278: Good evening
+lib\features\dashboard\presentation\dashboard_screen.dart:537: No farms yet
+lib\features\dashboard\presentation\dashboard_screen.dart:554: Could not load dashboard
+lib\features\maps\presentation\maps_screen.dart:151: Could not load live scouts
+lib\features\maps\presentation\maps_screen.dart:160: No scouts are currently out scouting
+lib\features\maps\presentation\maps_screen.dart:346: Could not load trail
+lib\features\reports\presentation\reports_screen.dart:382: All Farms
+lib\features\reports\presentation\reports_screen.dart:546: By category over period
+lib\features\reports\presentation\reports_screen.dart:709: No data
+lib\features\scouting\presentation\topbar_widgets.dart:38: Partly Cloudy
+lib\features\scouting\presentation\topbar_widgets.dart:355: Just now
+lib\features\scouting\presentation\topbar_widgets.dart:473: Feels like
+lib\features\scouting\presentation\topbar_widgets.dart:474: Feels like
+lib\features\scouting\presentation\topbar_widgets.dart:545: High Severity Alert
+lib\features\scouting\presentation\topbar_widgets.dart:546: Potential pest outbreak detected
+lib\features\scouting\presentation\topbar_widgets.dart:553: Inspection Due
+lib\features\scouting\presentation\topbar_widgets.dart:554: North Farm GH-21 scheduled for today
+lib\features\scouting\presentation\topbar_widgets.dart:561: Report Ready
+lib\features\scouting\presentation\topbar_widgets.dart:562: Weekly scouting summary is ready to view
+lib\features\scouting\presentation\topbar_widgets.dart:569: Irrigation Alert
+lib\features\scouting\presentation\topbar_widgets.dart:731: Just now
+lib\features\scouting\presentation\topbar_widgets.dart:793: Mark all read
+lib\features\scouting\presentation\topbar_widgets.dart:858: All caught up!
+lib\features\scouting\presentation\topbar_widgets.dart:865: No new notifications
+lib\features\settings\presentation\settings_screen.dart:62: System default
+lib\features\settings\presentation\settings_screen.dart:270: Loading farms...
+lib\features\settings\presentation\settings_screen.dart:274: No farms assigned to your account.
+lib\features\settings\presentation\settings_screen.dart:282: Inspection interval
+lib\features\settings\presentation\settings_screen.dart:283: Days between required greenhouse checks
+lib\features\settings\presentation\settings_screen.dart:300: Refresh data
+lib\features\settings\presentation\settings_screen.dart:301: Pull latest farm data from server
+lib\features\settings\presentation\settings_screen.dart:513: Loading team...
+lib\features\settings\presentation\settings_screen.dart:520: No team members found.
+lib\features\settings\presentation\settings_screen.dart:556: Send invite
+lib\features\settings\presentation\settings_screen.dart:618: Not set
+lib\features\settings\presentation\settings_screen.dart:635: App preferences
+lib\features\settings\presentation\settings_screen.dart:681: System default
+lib\features\settings\presentation\settings_screen.dart:704: Sign out
+lib\features\settings\presentation\settings_screen.dart:713: Save preferences
+lib\features\settings\presentation\settings_screen.dart:920: Sign out?
+lib\features\settings\presentation\settings_screen.dart:938: Sign out
+lib\shared\l10n\app_strings.dart:11: Flower Scout
+lib\shared\l10n\app_strings.dart:11: Flower Scout
+lib\shared\l10n\app_strings.dart:12: Kongoni River Farm
+lib\shared\l10n\app_strings.dart:12: Shamba la Kongoni River
+lib\shared\l10n\app_strings.dart:14: Welcome back to FlowerScout
+lib\shared\l10n\app_strings.dart:14: Karibu tena FlowerScout
+lib\shared\l10n\app_strings.dart:15: Barua pepe
+lib\shared\l10n\app_strings.dart:17: Signing in...
+lib\shared\l10n\app_strings.dart:18: Please enter your email and password.
+lib\shared\l10n\app_strings.dart:18: Tafadhali ingiza barua pepe na nenosiri.
+lib\shared\l10n\app_strings.dart:19: Login failed. Check your credentials.
+lib\shared\l10n\app_strings.dart:19: Kuingia kumeshindwa. Angalia taarifa zako.
+lib\shared\l10n\app_strings.dart:20: An unexpected error occurred.
+lib\shared\l10n\app_strings.dart:20: Hitilafu isiyotarajiwa imetokea.
+lib\shared\l10n\app_strings.dart:28: Sign out
+lib\shared\l10n\app_strings.dart:29: Sign out?
+lib\shared\l10n\app_strings.dart:30: Utahitaji kuingia tena ili kufikia FlowerScout.
+lib\shared\l10n\app_strings.dart:34: Good morning
+lib\shared\l10n\app_strings.dart:34: Habari za asubuhi
+lib\shared\l10n\app_strings.dart:35: Good afternoon
+lib\shared\l10n\app_strings.dart:35: Habari za mchana
+lib\shared\l10n\app_strings.dart:36: Good evening
+lib\shared\l10n\app_strings.dart:36: Habari za jioni
+lib\shared\l10n\app_strings.dart:37: Farm Overview
+lib\shared\l10n\app_strings.dart:37: Muhtasari wa Shamba
+lib\shared\l10n\app_strings.dart:38: Quick Actions
+lib\shared\l10n\app_strings.dart:38: Vitendo vya Haraka
+lib\shared\l10n\app_strings.dart:39: Report Summary
+lib\shared\l10n\app_strings.dart:39: Muhtasari wa Ripoti
+lib\shared\l10n\app_strings.dart:41: New Report
+lib\shared\l10n\app_strings.dart:41: Ripoti Mpya
+lib\shared\l10n\app_strings.dart:42: Open Maps
+lib\shared\l10n\app_strings.dart:42: Fungua Ramani
+lib\shared\l10n\app_strings.dart:44: View full reports
+lib\shared\l10n\app_strings.dart:44: Angalia ripoti zote
+lib\shared\l10n\app_strings.dart:45: No farms yet
+lib\shared\l10n\app_strings.dart:45: Hakuna mashamba bado
+lib\shared\l10n\app_strings.dart:46: Farms you have access to will appear here.
+lib\shared\l10n\app_strings.dart:46: Mashamba unayoweza kufikia yataonekana hapa.
+lib\shared\l10n\app_strings.dart:47: Could not load dashboard
+lib\shared\l10n\app_strings.dart:47: Dashibodi haijapakia
+lib\shared\l10n\app_strings.dart:48: Greenhouse Activation
+lib\shared\l10n\app_strings.dart:48: Uanzishaji wa Chafu
+lib\shared\l10n\app_strings.dart:49: Vyumba vya Mimea
+lib\shared\l10n\app_strings.dart:55: Total plants
+lib\shared\l10n\app_strings.dart:55: Jumla ya mimea
+lib\shared\l10n\app_strings.dart:56: Varieties in use
+lib\shared\l10n\app_strings.dart:56: Aina zinazotumiwa
+lib\shared\l10n\app_strings.dart:57: Active greenhouses
+lib\shared\l10n\app_strings.dart:57: Vyumba hai
+lib\shared\l10n\app_strings.dart:58: Isiyofanya kazi
+lib\shared\l10n\app_strings.dart:59: Total area
+lib\shared\l10n\app_strings.dart:59: Eneo lote
+lib\shared\l10n\app_strings.dart:60: Excellent condition
+lib\shared\l10n\app_strings.dart:60: Hali nzuri sana
+lib\shared\l10n\app_strings.dart:61: Good condition
+lib\shared\l10n\app_strings.dart:61: Hali nzuri
+lib\shared\l10n\app_strings.dart:62: Needs attention
+lib\shared\l10n\app_strings.dart:62: Inahitaji umakini
+lib\shared\l10n\app_strings.dart:63: Critical — action required
+lib\shared\l10n\app_strings.dart:63: Muhimu — hatua inahitajika
+lib\shared\l10n\app_strings.dart:67: Inspection In\nProgress
+lib\shared\l10n\app_strings.dart:68: New Inspection\nReport
+lib\shared\l10n\app_strings.dart:68: Ripoti Mpya\nya Ukaguzi
+lib\shared\l10n\app_strings.dart:69: Ready to Scout?
+lib\shared\l10n\app_strings.dart:69: Uko Tayari Kukagua?
+lib\shared\l10n\app_strings.dart:70: Start Scouting
+lib\shared\l10n\app_strings.dart:70: Anza Ukaguzi
+lib\shared\l10n\app_strings.dart:73: Inspection Progress
+lib\shared\l10n\app_strings.dart:73: Maendeleo ya Ukaguzi
+lib\shared\l10n\app_strings.dart:79: Add finding
+lib\shared\l10n\app_strings.dart:79: Ongeza tokeo
+lib\shared\l10n\app_strings.dart:80: Submit Report
+lib\shared\l10n\app_strings.dart:80: Wasilisha Ripoti
+lib\shared\l10n\app_strings.dart:82: Select farm
+lib\shared\l10n\app_strings.dart:82: Chagua shamba
+lib\shared\l10n\app_strings.dart:83: Select farm first
+lib\shared\l10n\app_strings.dart:83: Chagua shamba kwanza
+lib\shared\l10n\app_strings.dart:84: Select greenhouse
+lib\shared\l10n\app_strings.dart:84: Chagua chafu
+lib\shared\l10n\app_strings.dart:85: Select GH first
+lib\shared\l10n\app_strings.dart:85: Chagua chafu kwanza
+lib\shared\l10n\app_strings.dart:86: Select variety
+lib\shared\l10n\app_strings.dart:86: Chagua aina
+lib\shared\l10n\app_strings.dart:87: Please select Farm, Greenhouse and Variety
+lib\shared\l10n\app_strings.dart:87: Tafadhali chagua Shamba, Chafu na Aina
+lib\shared\l10n\app_strings.dart:88: Please add at least one finding
+lib\shared\l10n\app_strings.dart:88: Tafadhali ongeza tokeo moja angalau
+lib\shared\l10n\app_strings.dart:89: Report submitted successfully!
+lib\shared\l10n\app_strings.dart:89: Ripoti imewasilishwa!
+lib\shared\l10n\app_strings.dart:90: Failed to submit: 
+lib\shared\l10n\app_strings.dart:90: Imeshindwa kuwasilisha: 
+lib\shared\l10n\app_strings.dart:91: Could not load farm data
+lib\shared\l10n\app_strings.dart:91: Data ya shamba haijapakia
+lib\shared\l10n\app_strings.dart:92: Location services off
+lib\shared\l10n\app_strings.dart:92: Huduma za eneo zimezimwa
+lib\shared\l10n\app_strings.dart:95: Location permission required
+lib\shared\l10n\app_strings.dart:95: Ruhusa ya eneo inahitajika
+lib\shared\l10n\app_strings.dart:98: Continue anyway
+lib\shared\l10n\app_strings.dart:98: Endelea hata hivyo
+lib\shared\l10n\app_strings.dart:99: Open settings
+lib\shared\l10n\app_strings.dart:99: Fungua mipangilio
+lib\shared\l10n\app_strings.dart:104: Describe what you observed...
+lib\shared\l10n\app_strings.dart:104: Elezea ulichoona...
+lib\shared\l10n\app_strings.dart:107: Water Stress
+lib\shared\l10n\app_strings.dart:107: Msongo wa Maji
+lib\shared\l10n\app_strings.dart:117: Scout Trail Map
+lib\shared\l10n\app_strings.dart:117: Ramani ya Njia ya Ukaguzi
+lib\shared\l10n\app_strings.dart:120: Live Now
+lib\shared\l10n\app_strings.dart:120: Moja kwa Moja
+lib\shared\l10n\app_strings.dart:122: No scouts are currently out scouting
+lib\shared\l10n\app_strings.dart:122: Hakuna wakaguzi wanaokagua sasa hivi
+lib\shared\l10n\app_strings.dart:123: Could not load live scouts
+lib\shared\l10n\app_strings.dart:123: Wakaguzi wa moja kwa moja hawajapakia
+lib\shared\l10n\app_strings.dart:124: Could not load trail history
+lib\shared\l10n\app_strings.dart:124: Historia ya njia haijapakia
+lib\shared\l10n\app_strings.dart:125: No completed trails yet
+lib\shared\l10n\app_strings.dart:125: Hakuna njia zilizokamilika bado
+lib\shared\l10n\app_strings.dart:126: Delete trail?
+lib\shared\l10n\app_strings.dart:126: Futa njia?
+lib\shared\l10n\app_strings.dart:130: Live trail
+lib\shared\l10n\app_strings.dart:130: Njia ya moja kwa moja
+lib\shared\l10n\app_strings.dart:131: Trail playback
+lib\shared\l10n\app_strings.dart:131: Uchezaji wa njia
+lib\shared\l10n\app_strings.dart:132: Could not load trail
+lib\shared\l10n\app_strings.dart:132: Njia haijapakia
+lib\shared\l10n\app_strings.dart:133: No GPS points recorded for this trail
+lib\shared\l10n\app_strings.dart:133: Hakuna pointi za GPS zilizorekodiwa
+lib\shared\l10n\app_strings.dart:134: Unknown scout
+lib\shared\l10n\app_strings.dart:134: Mkaguzi asiyejulikana
+lib\shared\l10n\app_strings.dart:137: Reports & Analytics
+lib\shared\l10n\app_strings.dart:137: Ripoti na Uchambuzi
+lib\shared\l10n\app_strings.dart:138: Inspection trends, findings and performance
+lib\shared\l10n\app_strings.dart:138: Mwenendo wa ukaguzi, matokeo na utendaji
+lib\shared\l10n\app_strings.dart:139: Export PDF
+lib\shared\l10n\app_strings.dart:139: Hamisha PDF
+lib\shared\l10n\app_strings.dart:140: Export Excel
+lib\shared\l10n\app_strings.dart:140: Hamisha Excel
+lib\shared\l10n\app_strings.dart:141: Ufahamu wa AI
+lib\shared\l10n\app_strings.dart:142: Date Range
+lib\shared\l10n\app_strings.dart:143: All Farms
+lib\shared\l10n\app_strings.dart:143: Mashamba Yote
+lib\shared\l10n\app_strings.dart:147: Findings Trend
+lib\shared\l10n\app_strings.dart:147: Mwenendo wa Matokeo
+lib\shared\l10n\app_strings.dart:148: Severity Breakdown
+lib\shared\l10n\app_strings.dart:148: Mgawanyo wa Ukali
+lib\shared\l10n\app_strings.dart:149: Top Problem Categories
+lib\shared\l10n\app_strings.dart:149: Makundi Makuu ya Matatizo
+lib\shared\l10n\app_strings.dart:150: Top Greenhouses by Findings
+lib\shared\l10n\app_strings.dart:150: Vyumba vya Juu kwa Matokeo
+lib\shared\l10n\app_strings.dart:151: Recent Inspections
+lib\shared\l10n\app_strings.dart:151: Ukaguzi wa Hivi Karibuni
+lib\shared\l10n\app_strings.dart:152: No inspections match this filter.
+lib\shared\l10n\app_strings.dart:152: Hakuna ukaguzi unaolingana na kichujio hiki.
+lib\shared\l10n\app_strings.dart:159: Farm config
+lib\shared\l10n\app_strings.dart:159: Usanidi wa Shamba
+lib\shared\l10n\app_strings.dart:164: Farm & greenhouse config
+lib\shared\l10n\app_strings.dart:164: Usanidi wa Shamba na Chafu
+lib\shared\l10n\app_strings.dart:165: Manage your farms and growing locations.
+lib\shared\l10n\app_strings.dart:165: Simamia mashamba na maeneo ya ukuaji.
+lib\shared\l10n\app_strings.dart:166: Loading farms...
+lib\shared\l10n\app_strings.dart:166: Inapakia mashamba...
+lib\shared\l10n\app_strings.dart:167: No farms assigned to your account.
+lib\shared\l10n\app_strings.dart:167: Hakuna mashamba yaliyokabidhiwa akaunti yako.
+lib\shared\l10n\app_strings.dart:169: Inspection interval
+lib\shared\l10n\app_strings.dart:169: Muda wa ukaguzi
+lib\shared\l10n\app_strings.dart:170: Days between required greenhouse checks
+lib\shared\l10n\app_strings.dart:170: Siku kati ya ukaguzi wa chafu unaohitajika
+lib\shared\l10n\app_strings.dart:171: Refresh data
+lib\shared\l10n\app_strings.dart:171: Onyesha upya data
+lib\shared\l10n\app_strings.dart:172: Pull latest farm data from server
+lib\shared\l10n\app_strings.dart:172: Pata data mpya ya shamba kutoka seva
+lib\shared\l10n\app_strings.dart:173: Onyesha upya
+lib\shared\l10n\app_strings.dart:174: Your profile
+lib\shared\l10n\app_strings.dart:174: Wasifu wako
+lib\shared\l10n\app_strings.dart:175: Update your personal details.
+lib\shared\l10n\app_strings.dart:175: Sasisha maelezo yako ya kibinafsi.
+lib\shared\l10n\app_strings.dart:176: Loading profile...
+lib\shared\l10n\app_strings.dart:176: Inapakia wasifu...
+lib\shared\l10n\app_strings.dart:181: Save profile
+lib\shared\l10n\app_strings.dart:181: Hifadhi wasifu
+lib\shared\l10n\app_strings.dart:182: Team management
+lib\shared\l10n\app_strings.dart:182: Usimamizi wa Timu
+lib\shared\l10n\app_strings.dart:183: View and manage team access.
+lib\shared\l10n\app_strings.dart:183: Angalia na simamia ufikiaji wa timu.
+lib\shared\l10n\app_strings.dart:184: Loading team...
+lib\shared\l10n\app_strings.dart:184: Inapakia timu...
+lib\shared\l10n\app_strings.dart:185: No team members found.
+lib\shared\l10n\app_strings.dart:185: Hakuna wanachama wa timu walioopatikana.
+lib\shared\l10n\app_strings.dart:188: Send invite
+lib\shared\l10n\app_strings.dart:188: Tuma mwaliko
+lib\shared\l10n\app_strings.dart:189: Notifications & alerts
+lib\shared\l10n\app_strings.dart:189: Arifa na Tahadhari
+lib\shared\l10n\app_strings.dart:190: Control when and how FlowerScout notifies you.
+lib\shared\l10n\app_strings.dart:192: Overdue inspection reminder
+lib\shared\l10n\app_strings.dart:192: Ukumbusho wa ukaguzi uliochelewa
+lib\shared\l10n\app_strings.dart:194: Critical pest / disease alert
+lib\shared\l10n\app_strings.dart:194: Tahadhari ya wadudu/ugonjwa muhimu
+lib\shared\l10n\app_strings.dart:196: Weekly summary report
+lib\shared\l10n\app_strings.dart:196: Ripoti ya muhtasari wa kila wiki
+lib\shared\l10n\app_strings.dart:197: Every Monday 7 AM — farm health digest
+lib\shared\l10n\app_strings.dart:199: Push notifications
+lib\shared\l10n\app_strings.dart:199: Arifa za msukumo
+lib\shared\l10n\app_strings.dart:200: Mobile and desktop
+lib\shared\l10n\app_strings.dart:200: Simu na kompyuta
+lib\shared\l10n\app_strings.dart:201: Not set
+lib\shared\l10n\app_strings.dart:202: Add phone number in Profile
+lib\shared\l10n\app_strings.dart:202: Ongeza nambari ya simu kwenye Wasifu
+lib\shared\l10n\app_strings.dart:203: Save notification settings
+lib\shared\l10n\app_strings.dart:203: Hifadhi mipangilio ya arifa
+lib\shared\l10n\app_strings.dart:204: App preferences
+lib\shared\l10n\app_strings.dart:204: Mapendeleo ya Programu
+lib\shared\l10n\app_strings.dart:205: Personalise how FlowerScout looks and behaves.
+lib\shared\l10n\app_strings.dart:211: Show heatmap on load
+lib\shared\l10n\app_strings.dart:211: Onyesha ramani ya joto wakati wa kupakia
+lib\shared\l10n\app_strings.dart:214: Sign out
+lib\shared\l10n\app_strings.dart:215: Log out of FlowerScout
+lib\shared\l10n\app_strings.dart:215: Toka kwenye FlowerScout
+lib\shared\l10n\app_strings.dart:216: Save preferences
+lib\shared\l10n\app_strings.dart:216: Hifadhi mapendeleo
+lib\shared\l10n\app_strings.dart:221: System default
+lib\shared\l10n\app_strings.dart:231: System Admin
+lib\shared\l10n\app_strings.dart:231: Msimamizi Mkuu
+lib\shared\l10n\app_strings.dart:268: Show all
+lib\shared\l10n\app_strings.dart:268: Onyesha yote
+lib\shared\l10n\app_strings.dart:269: Show less
+lib\shared\l10n\app_strings.dart:269: Onyesha kidogo
+lib\shared\l10n\app_strings.dart:270: Load more
+lib\shared\l10n\app_strings.dart:270: Pakia zaidi
+lib\shared\l10n\app_strings.dart:271: No data
+lib\shared\l10n\app_strings.dart:271: Hakuna data
+lib\shared\l10n\app_strings.dart:275: Utendaji na mwenendo wa shamba
+lib\shared\l10n\app_strings.dart:278: By category over period
+lib\shared\l10n\app_strings.dart:278: Kwa kategoria kwa kipindi
+lib\shared\l10n\app_strings.dart:288: Top Greenhouses
+lib\shared\l10n\app_strings.dart:288: Vyumba vya Juu
+lib\shared\l10n\app_strings.dart:289: Findings by Category
+lib\shared\l10n\app_strings.dart:289: Matokeo kwa Kategoria
+lib\shared\l10n\app_strings.dart:292: Farm & greenhouse config
+lib\shared\l10n\app_strings.dart:292: Usanidi wa Shamba na Chafu
+lib\shared\l10n\app_strings.dart:293: Control when and how FlowerScout notifies you.
+lib\shared\l10n\app_strings.dart:294: Personalise how FlowerScout looks and behaves.
+lib\shared\l10n\app_strings.dart:295: Version 1.0.0 · Flutter
+lib\shared\l10n\app_strings.dart:295: Toleo 1.0.0 · Flutter
+lib\shared\l10n\app_strings.dart:296: Log out of FlowerScout
+lib\shared\l10n\app_strings.dart:296: Toka kwenye FlowerScout
+lib\shared\l10n\app_strings.dart:297: System default
+lib\shared\l10n\app_strings.dart:309: Every Monday 7 AM – farm health digest
+lib\shared\l10n\app_strings.dart:316: Last 7 Days
+lib\shared\l10n\app_strings.dart:316: Siku 7 Zilizopita
+lib\shared\l10n\app_strings.dart:317: Last 30 Days
+lib\shared\l10n\app_strings.dart:317: Siku 30 Zilizopita
+lib\shared\l10n\app_strings.dart:318: Last 3 Months
+lib\shared\l10n\app_strings.dart:318: Miezi 3 Iliyopita
+lib\shared\l10n\app_strings.dart:319: All Greenhouses
+lib\shared\l10n\app_strings.dart:319: Vyumba Vyote
+lib\shared\l10n\app_strings.dart:320: All Varieties
+lib\shared\l10n\app_strings.dart:320: Aina Zote
+lib\shared\l10n\app_strings.dart:321: Loading reports...
+lib\shared\l10n\app_strings.dart:321: Inapakia ripoti...
+lib\shared\l10n\app_strings.dart:322: No inspections found for this period.
+lib\shared\l10n\app_strings.dart:322: Hakuna ukaguzi kwa kipindi hiki.
+lib\shared\l10n\app_strings.dart:323: Could not load reports
+lib\shared\l10n\app_strings.dart:323: Ripoti hazijapakia
+lib\shared\l10n\app_strings.dart:325: Faili la Excel lenye data yote litahifadhiwa.
+lib\shared\l10n\app_strings.dart:326: Water Stress
+lib\shared\l10n\app_strings.dart:326: Msongo wa Maji
+lib\shared\l10n\app_strings.dart:327: Opening inspection...
+lib\shared\l10n\app_strings.dart:327: Inafungua ukaguzi...
+lib\shared\l10n\app_strings.dart:328: Sign out?
+lib\shared\providers\farm_repository.dart:193: Failed to load farms: ${e.message}
+lib\shared\providers\farm_repository.dart:207: Failed to update greenhouse: ${e.message}
+lib\shared\providers\farm_repository.dart:234: Failed to load profile: ${e.message}
+lib\shared\providers\farm_repository.dart:244: Not authenticated
+lib\shared\providers\farm_repository.dart:254: Failed to update profile: ${e.message}
+lib\shared\providers\farm_repository.dart:269: Failed to load team: ${e.message}

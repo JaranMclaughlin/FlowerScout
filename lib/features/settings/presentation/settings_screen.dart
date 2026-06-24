@@ -59,7 +59,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notifSms      = false;
 
   // Preferences
-  String _theme      = 'System default';
+  String _theme      = s.systemDefault;
   String _dateFormat = 'DD/MM/YYYY';
   String _mapDefault = 'Satellite';
   bool   _heatmap    = true;
@@ -267,11 +267,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       const SizedBox(height: 24),
 
       farmsAsync.when(
-        loading: () => const _LoadingCard(message: 'Loading farms...'),
+        loading: () => const _LoadingCard(message: s.loadingFarms),
         error:   (e, _) => _ErrorCard(message: e.toString(),
             onRetry: () => ref.read(farmsProvider.notifier).refresh()),
         data: (farms) => farms.isEmpty
-            ? const _EmptyCard(message: 'No farms assigned to your account.')
+            ? const _EmptyCard(message: s.noFarmsAssigned)
             : Column(children: [
                 ...farms.map((farm) => _farmCard(farm, isWide)),
                 const SizedBox(height: 16),
@@ -279,8 +279,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: 'INSPECTION DEFAULTS',
                   child: Column(children: [
                     _settingRow(
-                      label: 'Inspection interval',
-                      subtitle: 'Days between required greenhouse checks',
+                      label: s.inspectionInterval,
+                      subtitle: s.inspectionIntervalDesc,
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                         _iconBtn(Icons.remove_rounded, () {
                           if (_interval > 1) setState(() => _interval--);
@@ -297,8 +297,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     _divider(),
                     _settingRow(
-                      label: 'Refresh data',
-                      subtitle: 'Pull latest farm data from server',
+                      label: s.refreshData,
+                      subtitle: s.refreshDataDesc,
                       trailing: _outlineBtn('Refresh', () =>
                           ref.read(farmsProvider.notifier).refresh()),
                     ),
@@ -442,17 +442,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildProfileTab(bool isWide) {
     final profileAsync = ref.watch(profileProvider);
     return profileAsync.when(
-      loading: () => const _LoadingCard(message: 'Loading profile...'),
+      loading: () => const _LoadingCard(message: s.loadingProfile),
       error:   (e, _) => _ErrorCard(message: e.toString(),
           onRetry: () => ref.read(profileProvider.notifier).refresh()),
       data: (profile) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader('Your profile',
-              'Update your personal details.',
+          _sectionHeader(s.yourProfile,
+              s.yourProfileDesc,
               Icons.person_rounded, _C.canopy),
           const SizedBox(height: 24),
-          _card(label: 'PERSONAL INFO', child: Column(children: [
+          _card(label: s.personalInfo, child: Column(children: [
             // Avatar row
             Row(children: [
               Container(width: 56, height: 56,
@@ -478,16 +478,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               )),
             ]),
             _divider(),
-            _styledTextField(label: 'FULL NAME', controller: _nameCtrl),
+            _styledTextField(label: s.fullName, controller: _nameCtrl),
             const SizedBox(height: 14),
-            _styledTextField(label: 'EMAIL', controller: _emailCtrl,
+            _styledTextField(label: s.emailLabel, controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 14),
-            _styledTextField(label: 'PHONE', controller: _phoneCtrl,
+            _styledTextField(label: s.phone, controller: _phoneCtrl,
                 keyboardType: TextInputType.phone),
           ])),
           const SizedBox(height: 24),
-          _saveButton('Save profile', onTap: () async {
+          _saveButton(s.saveProfile, onTap: () async {
             await ref.read(profileProvider.notifier).save(
               fullName: _nameCtrl.text.trim(),
               phone: _phoneCtrl.text.trim().isEmpty
@@ -505,19 +505,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildTeamTab(bool isWide) {
     final teamAsync = ref.watch(teamProvider);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionHeader('Team management',
-          'View and manage team access.',
+      _sectionHeader(s.teamManagement,
+          s.teamManagementDesc,
           Icons.group_rounded, _C.canopy),
       const SizedBox(height: 24),
       teamAsync.when(
-        loading: () => const _LoadingCard(message: 'Loading team...'),
+        loading: () => const _LoadingCard(message: s.loadingTeam),
         error:   (e, _) => _ErrorCard(message: e.toString(), onRetry: () {
           ref.invalidate(teamProvider);
         }),
         data: (members) => _card(
           label: 'TEAM MEMBERS (${members.length})',
           child: members.isEmpty
-              ? const _EmptyCard(message: 'No team members found.')
+              ? const _EmptyCard(message: s.noTeamMembers)
               : Column(
                   children: members.asMap().entries.map((e) {
                     final m = e.value;
@@ -553,7 +553,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (v) => setState(() => _inviteRole = v!)),
           ],
           const SizedBox(height: 16),
-          _saveButton('Send invite',
+          _saveButton(s.sendInvite,
               icon: Icons.send_rounded, color: _C.canopy),
         ]),
       ),
@@ -615,7 +615,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             _notifPush, (v) => setState(() => _notifPush = v)),
         _divider(),
         _toggleRow('Email', _emailCtrl.text.isEmpty
-            ? 'Not set' : _emailCtrl.text,
+            ? s.notSet : _emailCtrl.text,
             _notifEmail, (v) => setState(() => _notifEmail = v)),
         _divider(),
         _toggleRow('SMS', s.addPhoneForSms,
@@ -632,7 +632,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildPreferencesTab(bool isWide) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionHeader('App preferences',
+      _sectionHeader(s.appPreferences,
           s.personaliseDesc,
           Icons.tune_rounded, _C.canopy),
       const SizedBox(height: 24),
@@ -678,7 +678,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       const SizedBox(height: 12),
       _card(label: 'APPEARANCE', child: Column(children: [
         _labeledDropdown(label: 'THEME', value: _theme,
-            items: ['System default', 'Light', 'Dark'],
+            items: [s.systemDefault, 'Light', 'Dark'],
             onChanged: (v) => setState(() => _theme = v!)),
         const SizedBox(height: 14),
         _labeledDropdown(label: 'DATE FORMAT', value: _dateFormat,
@@ -701,7 +701,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             trailing: _statusBadge('Latest')),
         _divider(),
         _settingRow(
-          label: 'Sign out',
+          label: s.signOutLabel,
           subtitle: s.logOut,
           labelColor: const Color(0xFFD32F2F),
           trailing: const Icon(Icons.logout_rounded,
@@ -710,7 +710,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ])),
       const SizedBox(height: 24),
-      _saveButton('Save preferences'),
+      _saveButton(s.savePreferences),
     ],
   );
 
@@ -917,7 +917,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _confirmSignOut() {
     showDialog(context: context, builder: (_) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text('Sign out?', style: TextStyle(
+      title: const Text(s.signOutQ, style: TextStyle(
           fontFamily: 'Georgia', fontSize: 18)),
       content: const Text(
           'You will need to log in again to access FlowerScout.'),
@@ -935,7 +935,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               );
             }
           },
-          child: const Text('Sign out',
+          child: const Text(s.signOutLabel,
               style: TextStyle(color: Color(0xFFD32F2F))),
         ),
       ],

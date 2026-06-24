@@ -1,0 +1,28 @@
+25: static const cream     = Color(0xFFF8FAF8);
+88: _headerAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
+124: locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 10)),
+143: _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+154: title: Text(title, style: const TextStyle(fontFamily: 'Georgia', fontSize: 17)),
+201: 'variety_name': selectedVariety,
+204: 'duration_seconds': _elapsedSeconds,
+254: content: Text('${ref.read(stringsProvider).failedToSubmit}$e'),
+261: void _addFinding([String category = 'Disease']) =>
+275: backgroundColor: _C.cream,
+350: final days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+351: final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+352: final dateStr = '${days[now.weekday-1]}, ${now.day} ${months[now.month-1]} ${now.year}';
+356: decoration: BoxDecoration(
+363: decoration: const BoxDecoration(color: _C.mist, shape: BoxShape.circle),
+390: final days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+391: final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+392: final dateStr = '${days[now.weekday-1]}, ${now.day.toString().padLeft(2,"0")} ${months[now.month-1]} ${now.year}';
+395: decoration: BoxDecoration(
+449: value: selectedFarm, items: farms, display: (f) => f.name, enabled: true,
+464: items: selectedGreenhouse?.varietyNames ?? [],
+503: Text('${(progress * 100).toInt()}%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _C.leaf)),
+522: decoration: BoxDecoration(shape: BoxShape.circle, color: done ? _C.leaf : _C.fog),
+638: decoration: BoxDecoration(
+646: decoration: BoxDecoration(
+652: Container(width: 8, height: 8, decoration: BoxDecoration(shape: BoxShape.circle, color: color)),
+704: Widget _labeledField(String label, TextEditingController ctrl, ValueChanged<String> onChanged, {String hint = ''}) =>
+713: decoration: InputDecoration(

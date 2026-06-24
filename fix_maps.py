@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿content = '''import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -7,10 +7,6 @@ import '../../../shared/theme/app_colors.dart';
 import '../../../shared/trail/data/trail_repository.dart';
 import '../../../shared/trail/providers/trail_providers.dart';
 import '../../../shared/providers/farm_providers.dart';
-import '../../../shared/trail/models/scout_trail.dart';
-import '../../../core/session/user_session.dart';
-import '../../../shared/l10n/app_strings.dart';
-import '../../../shared/providers/locale_provider.dart';
 
 const _green  = AppColors.leaf;
 const _greenL = AppColors.mint;
@@ -58,12 +54,12 @@ class MapsScreen extends ConsumerWidget {
                 child: const Icon(Icons.map_rounded, color: _green, size: 34),
               ),
               const SizedBox(height: 20),
-              Text(AppStrings.of(ref.watch(localeProvider)).scoutTrailMap,
+              const Text('Scout Trail Map',
                   style: TextStyle(fontFamily: 'Georgia', fontSize: 20,
                       fontWeight: FontWeight.w700, color: _ink)),
               const SizedBox(height: 8),
-              Text(
-                AppStrings.of(ref.watch(localeProvider)).trailManagerOnly,
+              const Text(
+                'Trail tracking and playback are available to farm managers and admins.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 13, color: _muted, height: 1.5),
               ),
@@ -102,7 +98,6 @@ class _ManagerMapsViewState extends ConsumerState<_ManagerMapsView> {
 
   @override
   Widget build(BuildContext context) {
-    final s = AppStrings.of(ref.watch(localeProvider));
     return Scaffold(
       backgroundColor: _bg,
       body: SafeArea(
@@ -110,10 +105,10 @@ class _ManagerMapsViewState extends ConsumerState<_ManagerMapsView> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(children: [
-              Expanded(child: _toggleChip(s.liveNow, _showLive,
+              Expanded(child: _toggleChip('Live Now', _showLive,
                   () => setState(() => _showLive = true))),
               const SizedBox(width: 10),
-              Expanded(child: _toggleChip(s.history, !_showLive,
+              Expanded(child: _toggleChip('History', !_showLive,
                   () => setState(() => _showLive = false))),
             ]),
           ),
@@ -148,7 +143,7 @@ class _LiveTrailsList extends ConsumerWidget {
     final trailsAsync = ref.watch(activeTrailsProvider);
     return trailsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-      error: (e, _) => const Center(child: Text(s.couldNotLoadLive, style: TextStyle(color: _muted))),
+      error: (e, _) => const Center(child: Text('Could not load live scouts', style: TextStyle(color: _muted))),
       data: (trails) {
         if (trails.isEmpty) {
           return const Center(
@@ -157,7 +152,7 @@ class _LiveTrailsList extends ConsumerWidget {
               child: Column(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.route_rounded, color: _muted, size: 36),
                 SizedBox(height: 12),
-                Text(s.noScoutsOut,
+                Text('No scouts are currently out scouting',
                     style: TextStyle(color: _muted, fontSize: 13)),
               ]),
             ),
@@ -181,10 +176,10 @@ class _TrailHistoryList extends ConsumerWidget {
     final trailsAsync = ref.watch(trailHistoryProvider);
     return trailsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-      error: (e, _) => Center(child: Text(AppStrings.of(ref.watch(localeProvider)).couldNotLoadHistory, style: const TextStyle(color: _muted))),
+      error: (e, _) => const Center(child: Text('Could not load trail history', style: TextStyle(color: _muted))),
       data: (trails) {
         if (trails.isEmpty) {
-          return Center(child: Text(AppStrings.of(ref.watch(localeProvider)).noCompletedTrails, style: const TextStyle(color: _muted, fontSize: 13)));
+          return const Center(child: Text('No completed trails yet', style: TextStyle(color: _muted, fontSize: 13)));
         }
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
@@ -204,8 +199,8 @@ class _TrailHistoryList extends ConsumerWidget {
                 context: context,
                 builder: (_) => AlertDialog(
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: Text(AppStrings.of(ref.watch(localeProvider)).deleteTrail),
-                  content: Text(AppStrings.of(ref.watch(localeProvider)).deleteTrailMsg),
+                  title: const Text('Delete trail?'),
+                  content: const Text('This will permanently delete the trail and all its GPS points.'),
                   actions: [
                     TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
                     TextButton(onPressed: () => Navigator.pop(context, true),
@@ -234,7 +229,6 @@ class _TrailTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final s = AppStrings.of(ref.watch(localeProvider));
     final duration = (trail.endedAt ?? DateTime.now()).difference(trail.startedAt);
     final farms = ref.watch(farmsProvider).value ?? [];
     String? farmName;
@@ -249,7 +243,7 @@ class _TrailTile extends ConsumerWidget {
       }
     }
     final farmText = farmName != null ? (ghCode != null ? farmName + ' - ' + ghCode : farmName) : null;
-    final statusText = isLive ? s.liveTrail + ' - ' : s.history + ' - ';
+    final statusText = isLive ? 'Live - ' : 'Completed - ';
 
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -266,7 +260,7 @@ class _TrailTile extends ConsumerWidget {
               decoration: BoxDecoration(shape: BoxShape.circle, color: isLive ? _red : _muted)),
           const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(trail.scoutName ?? s.unknownScout,
+            Text(trail.scoutName ?? 'Unknown scout',
                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: _ink)),
             const SizedBox(height: 2),
             if (farmText != null)
@@ -339,15 +333,15 @@ class _TrailPlaybackScreenState extends ConsumerState<_TrailPlaybackScreen> {
       backgroundColor: _bg,
       appBar: AppBar(
         backgroundColor: Colors.white, foregroundColor: _ink, elevation: 0,
-        title: Text(widget.isLive ? AppStrings.of(ref.watch(localeProvider)).liveTrail : AppStrings.of(ref.watch(localeProvider)).trailPlayback),
+        title: Text(widget.isLive ? 'Live trail' : 'Trail playback'),
       ),
       body: trailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-        error: (e, _) => const Center(child: Text(s.couldNotLoadTrail, style: TextStyle(color: _muted))),
+        error: (e, _) => const Center(child: Text('Could not load trail', style: TextStyle(color: _muted))),
         data: (trail) {
           final pts = trail.points.map((p) => LatLng(p.lat, p.lng)).toList();
           if (pts.isEmpty) {
-            return Center(child: Text(AppStrings.of(ref.watch(localeProvider)).noGpsPoints, style: const TextStyle(color: _muted)));
+            return const Center(child: Text('No GPS points recorded for this trail', style: TextStyle(color: _muted)));
           }
           final idx = _cursor.clamp(0, pts.length - 1).toInt();
           final cursorPt = pts[idx];
@@ -401,3 +395,6 @@ class _TrailPlaybackScreenState extends ConsumerState<_TrailPlaybackScreen> {
     );
   }
 }
+'''
+open('lib/features/maps/presentation/maps_screen.dart', 'w', encoding='utf-8').write(content)
+print('Done')

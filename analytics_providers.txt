@@ -1,0 +1,48 @@
+206:   int get hashCode => Object.hash(period, farmId, greenhouseId, variety);
+207: }
+208: 
+209: // ── Fetcher ─────────────────────────────────────────────────────────────
+210: 
+211: Future<List<InspectionRecord>> fetchInspectionRecords(
+212:   SupabaseClient db,
+213:   AnalyticsFilter filter,
+214: ) async {
+215:   var q = db.from('inspection_reports').select('''
+216:     id, submitted_at, started_at, variety_name, greenhouse_id, scout_id,
+217:     greenhouses!inner(code, farm_id),
+218:     inspection_findings(category, severity)
+219:   ''').gte('submitted_at', filter.since.toIso8601String());
+220: 
+221:   if (filter.greenhouseId != null) {
+222:     q = q.eq('greenhouse_id', filter.greenhouseId!);
+223:   } else if (filter.farmId != null) {
+224:     q = q.eq('greenhouses.farm_id', filter.farmId!);
+225:   }
+226:   if (filter.variety != null) {
+227:     q = q.eq('variety_name', filter.variety!);
+228:   }
+229: 
+230:   final rows = await q.order('submitted_at', ascending: false).limit(500);
+231:   return (rows as List).map((r) {
+232:     final row = Map<String, dynamic>.from(r as Map);
+233:     final ghData = row['greenhouses'];
+234:     if (ghData is Map) {
+235:       row['greenhouse_code'] = ghData['code'];
+236:     }
+237:     return InspectionRecord.fromRow(row);
+238:   }).toList();
+239: }
+240: 
+241: // ── Providers ───────────────────────────────────────────────────────────
+242: 
+243: final inspectionRecordsProvider =
+244:     FutureProvider.family<List<InspectionRecord>, AnalyticsFilter>((ref, filter) async {
+245:   final db = ref.watch(supabaseClientProvider);
+246:   return fetchInspectionRecords(db, filter);
+247: });
+248: 
+249: final reportStatsProvider =
+250:     FutureProvider.family<ReportStats, AnalyticsFilter>((ref, filter) async {
+251:   final records = await ref.watch(inspectionRecordsProvider(filter).future);
+252:   return ReportStats.fromInspections(records, filter.period, filter.since);
+253: });

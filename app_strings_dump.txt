@@ -1,0 +1,330 @@
+1: class AppStrings {
+2:   final String languageCode;
+3:   const AppStrings._(this.languageCode);
+4: 
+5:   static const en = AppStrings._('en');
+6:   static const sw = AppStrings._('sw');
+7: 
+8:   static AppStrings of(String code) => code == 'sw' ? sw : en;
+9: 
+10:   // ── Auth ──────────────────────────────────────────────────────────────────
+11:   String get appName            => _t('Flower Scout',            'Flower Scout');
+12:   String get farmName           => _t('Kongoni River Farm',      'Shamba la Kongoni River');
+13:   String get signIn             => _t('Sign in',                 'Ingia');
+14:   String get welcomeBack        => _t('Welcome back to FlowerScout', 'Karibu tena FlowerScout');
+15:   String get email              => _t('Email',                   'Barua pepe');
+16:   String get password           => _t('Password',                'Nenosiri');
+17:   String get signingIn          => _t('Signing in...',           'Inaingia...');
+18:   String get errorEmptyFields   => _t('Please enter your email and password.', 'Tafadhali ingiza barua pepe na nenosiri.');
+19:   String get errorLoginFailed   => _t('Login failed. Check your credentials.', 'Kuingia kumeshindwa. Angalia taarifa zako.');
+20:   String get errorUnexpected    => _t('An unexpected error occurred.',         'Hitilafu isiyotarajiwa imetokea.');
+21: 
+22:   // ── Shell / Nav ───────────────────────────────────────────────────────────
+23:   String get navDashboard   => _t('Dashboard',  'Dashibodi');
+24:   String get navScouting    => _t('Scouting',   'Ukaguzi');
+25:   String get navMaps        => _t('Maps',       'Ramani');
+26:   String get navReports     => _t('Reports',    'Ripoti');
+27:   String get navSettings    => _t('Settings',   'Mipangilio');
+28:   String get signOut        => _t('Sign out',   'Toka');
+29:   String get signOutConfirm => _t('Sign out?',  'Toka?');
+30:   String get signOutMsg     => _t('You will need to log in again to access FlowerScout.', 'Utahitaji kuingia tena ili kufikia FlowerScout.');
+31:   String get cancel         => _t('Cancel',     'Ghairi');
+32: 
+33:   // ── Dashboard ─────────────────────────────────────────────────────────────
+34:   String get goodMorning    => _t('Good morning',   'Habari za asubuhi');
+35:   String get goodAfternoon  => _t('Good afternoon', 'Habari za mchana');
+36:   String get goodEvening    => _t('Good evening',   'Habari za jioni');
+37:   String get farmOverview   => _t('Farm Overview',  'Muhtasari wa Shamba');
+38:   String get quickActions   => _t('Quick Actions',  'Vitendo vya Haraka');
+39:   String get reportSummary  => _t('Report Summary', 'Muhtasari wa Ripoti');
+40:   String get farms          => _t('Farms',          'Mashamba');
+41:   String get newReport      => _t('New Report',     'Ripoti Mpya');
+42:   String get openMaps       => _t('Open Maps',      'Fungua Ramani');
+43:   String get settings       => _t('Settings',       'Mipangilio');
+44:   String get viewFullReports=> _t('View full reports', 'Angalia ripoti zote');
+45:   String get noFarmsYet     => _t('No farms yet',   'Hakuna mashamba bado');
+46:   String get noFarmsDesc    => _t('Farms you have access to will appear here.', 'Mashamba unayoweza kufikia yataonekana hapa.');
+47:   String get couldNotLoad   => _t('Could not load dashboard', 'Dashibodi haijapakia');
+48:   String get ghActivation   => _t('Greenhouse Activation', 'Uanzishaji wa Chafu');
+49:   String get greenhouses    => _t('Greenhouses',    'Vyumba vya Mimea');
+50:   String get plantings      => _t('Plantings',      'Upandaji');
+51:   String get varieties      => _t('Varieties',      'Aina');
+52:   String get active         => _t('Active',         'Hai');
+53:   String get check          => _t('Check',          'Angalia');
+54:   String get inactive       => _t('inactive',       'haifanyi kazi');
+55:   String get totalPlants    => _t('Total plants',   'Jumla ya mimea');
+56:   String get varietiesInUse => _t('Varieties in use','Aina zinazotumiwa');
+57:   String get activeGh       => _t('Active greenhouses', 'Vyumba hai');
+58:   String get inactiveLabel  => _t('Inactive',       'Isiyofanya kazi');
+59:   String get totalArea      => _t('Total area',     'Eneo lote');
+60:   String get excellentCond  => _t('Excellent condition',       'Hali nzuri sana');
+61:   String get goodCond       => _t('Good condition',            'Hali nzuri');
+62:   String get needsAttention => _t('Needs attention',           'Inahitaji umakini');
+63:   String get criticalAction => _t('Critical — action required','Muhimu — hatua inahitajika');
+64: 
+65:   // ── Scouting ──────────────────────────────────────────────────────────────
+66:   String get scoutingInspection => _t('SCOUTING INSPECTION',     'UKAGUZI WA SHAMBA');
+67:   String get inspectionInProgress=>_t('Inspection In\nProgress', 'Ukaguzi\nUnafanyika');
+68:   String get newInspectionReport=> _t('New Inspection\nReport',  'Ripoti Mpya\nya Ukaguzi');
+69:   String get readyToScout       => _t('Ready to Scout?',         'Uko Tayari Kukagua?');
+70:   String get startScouting      => _t('Start Scouting',          'Anza Ukaguzi');
+71:   String get startScoutingDesc  => _t('Tap Start Scouting to begin your inspection.\nYour location will be captured to geo-tag findings.',
+72:                                       'Gonga Anza Ukaguzi kuanza ukaguzi wako.\nEneo lako litanaswa kutambua matokeo.');
+73:   String get inspectionProgress => _t('Inspection Progress',     'Maendeleo ya Ukaguzi');
+74:   String get farm               => _t('Farm',     'Shamba');
+75:   String get greenhouse         => _t('Greenhouse','Chafu');
+76:   String get variety            => _t('Variety',   'Aina');
+77:   String get findings           => _t('Findings',  'Matokeo');
+78:   String get quickAdd           => _t('QUICK ADD', 'ONGEZA HARAKA');
+79:   String get addFinding         => _t('Add finding','Ongeza tokeo');
+80:   String get submitReport       => _t('Submit Report', 'Wasilisha Ripoti');
+81:   String get submitting         => _t('Submitting...', 'Inawasilisha...');
+82:   String get selectFarm         => _t('Select farm',       'Chagua shamba');
+83:   String get selectFarmFirst    => _t('Select farm first', 'Chagua shamba kwanza');
+84:   String get selectGreenhouse   => _t('Select greenhouse', 'Chagua chafu');
+85:   String get selectGhFirst      => _t('Select GH first',   'Chagua chafu kwanza');
+86:   String get selectVariety      => _t('Select variety',    'Chagua aina');
+87:   String get pleaseSelectAll    => _t('Please select Farm, Greenhouse and Variety', 'Tafadhali chagua Shamba, Chafu na Aina');
+88:   String get pleaseAddFinding   => _t('Please add at least one finding', 'Tafadhali ongeza tokeo moja angalau');
+89:   String get reportSubmitted    => _t('Report submitted successfully!', 'Ripoti imewasilishwa!');
+90:   String get failedToSubmit     => _t('Failed to submit: ', 'Imeshindwa kuwasilisha: ');
+91:   String get couldNotLoadFarm   => _t('Could not load farm data', 'Data ya shamba haijapakia');
+92:   String get locationServicesOff=> _t('Location services off', 'Huduma za eneo zimezimwa');
+93:   String get locationServicesMsg=> _t('Please enable location services to geo-tag your inspections.',
+94:                                       'Tafadhali wezesha huduma za eneo ili kutambua ukaguzi wako.');
+95:   String get locationPermReq    => _t('Location permission required', 'Ruhusa ya eneo inahitajika');
+96:   String get locationPermMsg    => _t('Location access is denied. Findings will not be geo-tagged. You can enable it in app settings.',
+97:                                       'Ufikiaji wa eneo umekataliwa. Matokeo hayatatambuliwa kwa eneo. Unaweza kuiwezesha katika mipangilio.');
+98:   String get continueAnyway     => _t('Continue anyway', 'Endelea hata hivyo');
+99:   String get openAppSettings    => _t('Open settings',   'Fungua mipangilio');
+100:   String get findingLabel       => _t('Finding',         'Tokeo');
+101:   String get category           => _t('CATEGORY',        'KATEGORIA');
+102:   String get severity           => _t('SEVERITY',        'UKALI');
+103:   String get issueObservation   => _t('ISSUE / OBSERVATION', 'TATIZO / UCHUNGUZI');
+104:   String get describeObserved   => _t('Describe what you observed...', 'Elezea ulichoona...');
+105:   String get disease            => _t('Disease',      'Ugonjwa');
+106:   String get pest               => _t('Pest',         'Wadudu');
+107:   String get waterStress        => _t('Water Stress', 'Msongo wa Maji');
+108:   String get nutrition          => _t('Nutrition',    'Lishe');
+109:   String get irrigation         => _t('Irrigation',   'Umwagiliaji');
+110:   String get other              => _t('Other',        'Nyingine');
+111:   String get low                => _t('Low',          'Chini');
+112:   String get medium             => _t('Medium',       'Wastani');
+113:   String get high               => _t('High',         'Juu');
+114:   String get critical           => _t('Critical',     'Muhimu');
+115: 
+116:   // ── Maps ──────────────────────────────────────────────────────────────────
+117:   String get scoutTrailMap      => _t('Scout Trail Map',  'Ramani ya Njia ya Ukaguzi');
+118:   String get trailManagerOnly   => _t('Trail tracking and playback are available to farm managers and admins.',
+119:                                       'Ufuatiliaji wa njia unapatikana kwa wasimamizi na wasimamizi wakuu.');
+120:   String get liveNow            => _t('Live Now',         'Moja kwa Moja');
+121:   String get history            => _t('History',          'Historia');
+122:   String get noScoutsOut        => _t('No scouts are currently out scouting', 'Hakuna wakaguzi wanaokagua sasa hivi');
+123:   String get couldNotLoadLive   => _t('Could not load live scouts',   'Wakaguzi wa moja kwa moja hawajapakia');
+124:   String get couldNotLoadHistory=> _t('Could not load trail history', 'Historia ya njia haijapakia');
+125:   String get noCompletedTrails  => _t('No completed trails yet',      'Hakuna njia zilizokamilika bado');
+126:   String get deleteTrail        => _t('Delete trail?',    'Futa njia?');
+127:   String get deleteTrailMsg     => _t('This will permanently delete the trail and all its GPS points.',
+128:                                       'Hii itafuta njia na pointi zote za GPS kabisa.');
+129:   String get delete             => _t('Delete',           'Futa');
+130:   String get liveTrail          => _t('Live trail',       'Njia ya moja kwa moja');
+131:   String get trailPlayback      => _t('Trail playback',   'Uchezaji wa njia');
+132:   String get couldNotLoadTrail  => _t('Could not load trail', 'Njia haijapakia');
+133:   String get noGpsPoints        => _t('No GPS points recorded for this trail', 'Hakuna pointi za GPS zilizorekodiwa');
+134:   String get unknownScout       => _t('Unknown scout',    'Mkaguzi asiyejulikana');
+135: 
+136:   // ── Reports ───────────────────────────────────────────────────────────────
+137:   String get reportsAnalytics   => _t('Reports & Analytics',    'Ripoti na Uchambuzi');
+138:   String get reportsSubtitle    => _t('Inspection trends, findings and performance', 'Mwenendo wa ukaguzi, matokeo na utendaji');
+139:   String get exportPdf          => _t('Export PDF',   'Hamisha PDF');
+140:   String get exportExcel        => _t('Export Excel', 'Hamisha Excel');
+141:   String get aiInsight          => _t('AI Insight',   'Ufahamu wa AI');
+142:   String get dateRange          => _t('Date Range',   'Muda');
+143:   String get allFarms           => _t('All Farms',    'Mashamba Yote');
+144:   String get allLabel           => _t('All',          'Yote');
+145:   String get inspections        => _t('Inspections',  'Ukaguzi');
+146:   String get pests              => _t('Pests',        'Wadudu');
+147:   String get findingsTrend      => _t('Findings Trend','Mwenendo wa Matokeo');
+148:   String get severityBreakdown  => _t('Severity Breakdown',     'Mgawanyo wa Ukali');
+149:   String get topProblemCats     => _t('Top Problem Categories', 'Makundi Makuu ya Matatizo');
+150:   String get topGhByFindings    => _t('Top Greenhouses by Findings', 'Vyumba vya Juu kwa Matokeo');
+151:   String get recentInspections  => _t('Recent Inspections',     'Ukaguzi wa Hivi Karibuni');
+152:   String get noMatchFilter      => _t('No inspections match this filter.', 'Hakuna ukaguzi unaolingana na kichujio hiki.');
+153:   String get bar                => _t('Bar',  'Mstari');
+154:   String get line               => _t('Line', 'Mstari');
+155:   String get download           => _t('Download', 'Pakua');
+156: 
+157:   // ── Settings ──────────────────────────────────────────────────────────────
+158:   String get settingsTitle      => _t('Settings',     'Mipangilio');
+159:   String get tabFarms           => _t('Farm config',  'Usanidi wa Shamba');
+160:   String get tabProfile         => _t('Profile',      'Wasifu');
+161:   String get tabTeam            => _t('Team',         'Timu');
+162:   String get tabNotifications   => _t('Notifications','Arifa');
+163:   String get tabPreferences     => _t('Preferences',  'Mapendeleo');
+164:   String get farmGhConfig       => _t('Farm & greenhouse config', 'Usanidi wa Shamba na Chafu');
+165:   String get farmGhConfigDesc   => _t('Manage your farms and growing locations.', 'Simamia mashamba na maeneo ya ukuaji.');
+166:   String get loadingFarms       => _t('Loading farms...','Inapakia mashamba...');
+167:   String get noFarmsAssigned    => _t('No farms assigned to your account.', 'Hakuna mashamba yaliyokabidhiwa akaunti yako.');
+168:   String get inspectionDefaults => _t('INSPECTION DEFAULTS', 'MIPANGILIO YA UKAGUZI');
+169:   String get inspectionInterval => _t('Inspection interval', 'Muda wa ukaguzi');
+170:   String get inspectionIntervalDesc=> _t('Days between required greenhouse checks', 'Siku kati ya ukaguzi wa chafu unaohitajika');
+171:   String get refreshData        => _t('Refresh data',  'Onyesha upya data');
+172:   String get refreshDataDesc    => _t('Pull latest farm data from server', 'Pata data mpya ya shamba kutoka seva');
+173:   String get refresh            => _t('Refresh',       'Onyesha upya');
+174:   String get yourProfile        => _t('Your profile',  'Wasifu wako');
+175:   String get yourProfileDesc    => _t('Update your personal details.', 'Sasisha maelezo yako ya kibinafsi.');
+176:   String get loadingProfile     => _t('Loading profile...', 'Inapakia wasifu...');
+177:   String get personalInfo       => _t('PERSONAL INFO', 'TAARIFA ZA KIBINAFSI');
+178:   String get fullName           => _t('FULL NAME',     'JINA KAMILI');
+179:   String get emailLabel         => _t('EMAIL',         'BARUA PEPE');
+180:   String get phone              => _t('PHONE',         'SIMU');
+181:   String get saveProfile        => _t('Save profile',  'Hifadhi wasifu');
+182:   String get teamManagement     => _t('Team management',    'Usimamizi wa Timu');
+183:   String get teamManagementDesc => _t('View and manage team access.', 'Angalia na simamia ufikiaji wa timu.');
+184:   String get loadingTeam        => _t('Loading team...','Inapakia timu...');
+185:   String get noTeamMembers      => _t('No team members found.', 'Hakuna wanachama wa timu walioopatikana.');
+186:   String get inviteNewMember    => _t('INVITE A NEW MEMBER', 'ALIKA MWANACHAMA MPYA');
+187:   String get roleLabel          => _t('ROLE',          'WADHIFU');
+188:   String get sendInvite         => _t('Send invite',   'Tuma mwaliko');
+189:   String get notificationsAlerts=> _t('Notifications & alerts',  'Arifa na Tahadhari');
+190:   String get notificationsDesc  => _t('Control when and how FlowerScout notifies you.', 'Dhibiti wakati na jinsi FlowerScout inavyokutaarifu.');
+191:   String get inspectionAlerts   => _t('INSPECTION ALERTS',    'TAHADHARI ZA UKAGUZI');
+192:   String get overdueReminder    => _t('Overdue inspection reminder', 'Ukumbusho wa ukaguzi uliochelewa');
+193:   String get overdueDesc        => _t('Notify when a greenhouse passes its inspection date', 'Taarifu wakati chafu kinapopita tarehe yake ya ukaguzi');
+194:   String get criticalAlert      => _t('Critical pest / disease alert', 'Tahadhari ya wadudu/ugonjwa muhimu');
+195:   String get criticalAlertDesc  => _t('Immediate push when health score drops below threshold', 'Msukumo wa haraka wakati alama ya afya inashuka chini ya kiwango');
+196:   String get weeklySummary      => _t('Weekly summary report', 'Ripoti ya muhtasari wa kila wiki');
+197:   String get weeklyDesc         => _t('Every Monday 7 AM — farm health digest', 'Kila Jumatatu saa 1 asubuhi — muhtasari wa afya ya shamba');
+198:   String get deliveryChannels   => _t('DELIVERY CHANNELS',   'NJIA ZA UTOAJI');
+199:   String get pushNotifications  => _t('Push notifications',  'Arifa za msukumo');
+200:   String get pushDesc           => _t('Mobile and desktop',  'Simu na kompyuta');
+201:   String get notSet             => _t('Not set',             'Haijawekwa');
+202:   String get addPhoneForSms     => _t('Add phone number in Profile', 'Ongeza nambari ya simu kwenye Wasifu');
+203:   String get saveNotifSettings  => _t('Save notification settings', 'Hifadhi mipangilio ya arifa');
+204:   String get appPreferences     => _t('App preferences',    'Mapendeleo ya Programu');
+205:   String get appPreferencesDesc => _t('Personalise how FlowerScout looks and behaves.', 'Personalisha jinsi FlowerScout inavyoonekana na kutenda.');
+206:   String get appearance         => _t('APPEARANCE',         'MUONEKANO');
+207:   String get theme              => _t('THEME',              'MANDHARI');
+208:   String get dateFormat         => _t('DATE FORMAT',        'MUUNDO WA TAREHE');
+209:   String get mapDefaults        => _t('MAP DEFAULTS',       'MIPANGILIO YA RAMANI');
+210:   String get defaultView        => _t('DEFAULT VIEW',       'MTAZAMO WA CHAGUO-MSINGI');
+211:   String get showHeatmap        => _t('Show heatmap on load','Onyesha ramani ya joto wakati wa kupakia');
+212:   String get heatmapDesc        => _t('Auto-display scouting heatmap when opening Maps', 'Onyesha ramani ya ukaguzi moja kwa moja unapofungua Ramani');
+213:   String get about              => _t('ABOUT',              'KUHUSU');
+214:   String get signOutLabel       => _t('Sign out',           'Toka');
+215:   String get signOutSettingsDesc=> _t('Log out of FlowerScout', 'Toka kwenye FlowerScout');
+216:   String get savePreferences    => _t('Save preferences',   'Hifadhi mapendeleo');
+217:   String get saved              => _t('saved',              'imehifadhiwa');
+218:   String get language           => _t('LANGUAGE',           'LUGHA');
+219:   String get english            => _t('English',            'Kiingereza');
+220:   String get swahili            => _t('Swahili',            'Kiswahili');
+221:   String get systemDefault      => _t('System default',     'Chaguo-msingi la mfumo');
+222:   String get lightTheme         => _t('Light',              'Mwanga');
+223:   String get darkTheme          => _t('Dark',               'Giza');
+224:   String get satellite          => _t('Satellite',          'Setilaiti');
+225:   String get terrain            => _t('Terrain',            'Ardhi');
+226:   String get street             => _t('Street',             'Mtaa');
+227:   String get latest             => _t('Latest',             'Mpya');
+228:   String get scout              => _t('Scout',              'Mkaguzi');
+229:   String get manager            => _t('Manager',            'Msimamizi');
+230:   String get viewer             => _t('Viewer',             'Mtazamaji');
+231:   String get systemAdmin        => _t('System Admin',       'Msimamizi Mkuu');
+232: 
+233: 
+234:   // ── Months ────────────────────────────────────────────────────────────────
+235:   List<String> get monthsShort => languageCode=='sw'
+236:     ? ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ago','Sep','Okt','Nov','Des']
+237:     : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+238: 
+239:   // ── Chart labels ──────────────────────────────────────────────────────────
+240:   List<String> get chartLabelsToday   => languageCode=='sw'
+241:     ? ['6as','8as','10as','12ch','2mch','4jio','6jio']
+242:     : ['6am','8am','10am','12pm','2pm','4pm','6pm'];
+243:   List<String> get chartLabels30Days  => ['W1','W2','W3','W4','W5'];
+244:   List<String> get chartLabels3Months => languageCode=='sw'
+245:     ? ['M1','M2','M3'] : ['M1','M2','M3'];
+246:   List<String> get chartLabelsWeek    => languageCode=='sw'
+247:     ? ['Jtt','Jma','Jtn','Alh','Iju','Jum','Jmsi']
+248:     : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+249: 
+250:   // Full day names
+251:   List<String> get weekdaysFull => languageCode=='sw'
+252:     ? ['Jumatatu','Jumanne','Jumatano','Alhamisi','Ijumaa','Jumamosi','Jumapili']
+253:     : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+254: 
+255:   // Full month names
+256:   List<String> get monthsFull => languageCode=='sw'
+257:     ? ['Januari','Februari','Machi','Aprili','Mei','Juni','Julai','Agosti','Septemba','Oktoba','Novemba','Desemba']
+258:     : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+259: 
+260:   // ── Table headers ─────────────────────────────────────────────────────────
+261:   String get colDate      => _t('Date',     'Tarehe');
+262:   String get colGh        => _t('GH',       'Chafu');
+263:   String get colVariety   => _t('Variety',  'Aina');
+264:   String get colCategory  => _t('Category', 'Kategoria');
+265:   String get colSeverity  => _t('Severity', 'Ukali');
+266: 
+267:   // ── UI actions ────────────────────────────────────────────────────────────
+268:   String get showAll      => _t('Show all', 'Onyesha yote');
+269:   String get showLess     => _t('Show less','Onyesha kidogo');
+270:   String get loadMore     => _t('Load more','Pakia zaidi');
+271:   String get noData       => _t('No data',  'Hakuna data');
+272: 
+273:   // ── Analytics screen ──────────────────────────────────────────────────────
+274:   String get analytics         => _t('Analytics',                    'Uchambuzi');
+275:   String get analyticsSubtitle => _t('Farm-wide performance and trends','Utendaji na mwenendo wa shamba');
+276:   String get period            => _t('Period',                       'Kipindi');
+277:   String get farmFilter        => _t('Farm',                         'Shamba');
+278:   String get findingsTrendSub  => _t('By category over period',      'Kwa kategoria kwa kipindi');
+279:   String get diseaseLegend     => _t('Disease',  'Ugonjwa');
+280:   String get pestsLegend       => _t('Pests',    'Wadudu');
+281:   String get waterLegend       => _t('Water',    'Maji');
+282:   String get criticalLabel     => _t('Critical', 'Muhimu');
+283:   String get highLabel         => _t('High',     'Juu');
+284:   String get mediumLabel       => _t('Medium',   'Wastani');
+285:   String get lowLabel          => _t('Low',      'Chini');
+286:   String get barLabel          => _t('Bar',      'Mhimili');
+287:   String get lineLabel         => _t('Line',     'Mstari');
+288:   String get topGreenhouses    => _t('Top Greenhouses',      'Vyumba vya Juu');
+289:   String get findingsByCategory=> _t('Findings by Category', 'Matokeo kwa Kategoria');
+290: 
+291:   // ── Settings hardcoded ────────────────────────────────────────────────────
+292:   String get farmGhConfigTitle => _t('Farm & greenhouse config',  'Usanidi wa Shamba na Chafu');
+293:   String get controlNotif      => _t('Control when and how FlowerScout notifies you.', 'Dhibiti wakati na jinsi FlowerScout inavyokutaarifu.');
+294:   String get personaliseDesc   => _t('Personalise how FlowerScout looks and behaves.', 'Personalisha jinsi FlowerScout inavyoonekana na kutenda.');
+295:   String get versionLabel      => _t('Version 1.0.0 · Flutter',   'Toleo 1.0.0 · Flutter');
+296:   String get logOut            => _t('Log out of FlowerScout',     'Toka kwenye FlowerScout');
+297:   String get themeSystem       => _t('System default', 'Chaguo-msingi la mfumo');
+298:   String get themeLight        => _t('Light',  'Mwanga');
+299:   String get themeDark         => _t('Dark',   'Giza');
+300:   String get mapSatellite      => _t('Satellite', 'Setilaiti');
+301:   String get mapTerrain        => _t('Terrain',   'Ardhi');
+302:   String get mapStreet         => _t('Street',    'Mtaa');
+303:   String get dateFmtDMY        => _t('DD/MM/YYYY',      'DD/MM/YYYY');
+304:   String get dateFmtMDY        => _t('MM/DD/YYYY',      'MM/DD/YYYY');
+305:   String get dateFmtISO        => _t('YYYY-MM-DD (ISO)','YYYY-MM-DD (ISO)');
+306:   String get roleScout         => _t('Scout',   'Mkaguzi');
+307:   String get roleViewer        => _t('Viewer',  'Mtazamaji');
+308:   String get roleManager       => _t('Manager', 'Msimamizi');
+309:   String get weeklyDescFull    => _t('Every Monday 7 AM – farm health digest', 'Kila Jumatatu saa 1 asubuhi – muhtasari wa afya ya shamba');
+310:   String get showHeatmapDesc   => _t('Auto-display scouting heatmap when opening Maps', 'Onyesha ramani ya ukaguzi moja kwa moja unapofungua Ramani');
+311: 
+312:   String _t(String en, String sw) => languageCode == 'sw' ? sw : en;
+313: 
+314:   // ── Reports extra ────────────────────────────────────────────────────────
+315:   String get today           => _t('Today',          'Leo');
+316:   String get last7Days       => _t('Last 7 Days',    'Siku 7 Zilizopita');
+317:   String get last30Days      => _t('Last 30 Days',   'Siku 30 Zilizopita');
+318:   String get last3Months     => _t('Last 3 Months',  'Miezi 3 Iliyopita');
+319:   String get allGreenhouses  => _t('All Greenhouses','Vyumba Vyote');
+320:   String get allVarieties    => _t('All Varieties',  'Aina Zote');
+321:   String get loadingReports  => _t('Loading reports...','Inapakia ripoti...');
+322:   String get noReportsYet    => _t('No inspections found for this period.','Hakuna ukaguzi kwa kipindi hiki.');
+323:   String get errorLoadReports=> _t('Could not load reports','Ripoti hazijapakia');
+324:   String get exportPdfDesc   => _t('A PDF report will be generated for the current filters.','Ripoti ya PDF itatengenezwa kwa vichujio vya sasa.');
+325:   String get exportExcelDesc => _t('An Excel file with all inspection data will be saved.','Faili la Excel lenye data yote litahifadhiwa.');
+326:   String get waterStressShort=> _t('Water Stress','Msongo wa Maji');
+327:   String get openingInspect  => _t('Opening inspection...','Inafungua ukaguzi...');
+328:   String get signOutQ        => _t('Sign out?','Toka?');
+329: 
+330: }
