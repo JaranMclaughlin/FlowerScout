@@ -1,5 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../shared/providers/locale_provider.dart';
+import '../../../shared/l10n/app_strings.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/providers/farm_providers.dart';
@@ -11,6 +13,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final farmsAsync   = ref.watch(farmsProvider);
     final profileAsync = ref.watch(profileProvider);
     final pad          = AppSizes.pagePadding(context);
@@ -41,16 +44,16 @@ class DashboardScreen extends ConsumerWidget {
                     children: [
                       _Greeting(name: userName),
                       const SizedBox(height: AppSizes.spaceLg),
-                      _HealthCard(stats: stats),
+                      _HealthCard(stats: stats, s: s),
                       const SizedBox(height: AppSizes.space2xl),
-                      Text('Farm Overview', style: AppTextStyles.heading),
+                      Text(s.farmOverview, style: AppTextStyles.heading),
                       const SizedBox(height: AppSizes.spaceMd),
-                      _StatsGrid(stats: stats),
+                      _StatsGrid(stats: stats, s: s),
                       const SizedBox(height: AppSizes.space2xl),
                       if (isWide)
-                        _WideBody(farms: farms, stats: stats, ref: ref)
+                        _WideBody(farms: farms, stats: stats, ref: ref, s: s)
                       else
-                        _NarrowBody(farms: farms, stats: stats, ref: ref),
+                        _NarrowBody(farms: farms, stats: stats, ref: ref, s: s),
                       const SizedBox(height: AppSizes.space3xl),
                     ],
                   ),
@@ -69,7 +72,8 @@ class _WideBody extends StatelessWidget {
   final List<FarmModel> farms;
   final _DashboardStats stats;
   final WidgetRef ref;
-  const _WideBody({required this.farms, required this.stats, required this.ref});
+  final AppStrings s;
+  const _WideBody({required this.farms, required this.stats, required this.ref, required this.s});
 
   @override
   Widget build(BuildContext context) {
@@ -82,12 +86,12 @@ class _WideBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Farms', style: AppTextStyles.heading),
+              Text(s.farms, style: AppTextStyles.heading),
               const SizedBox(height: AppSizes.spaceMd),
               if (farms.isEmpty)
-                const _EmptyFarmsCard()
+                _EmptyFarmsCard(s: s)
               else
-                ...farms.map((f) => _FarmTile(farm: f)),
+                ...farms.map((f) => _FarmTile(farm: f, s: s)),
             ],
           ),
         ),
@@ -98,13 +102,13 @@ class _WideBody extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Quick Actions', style: AppTextStyles.heading),
+              Text(s.quickActions, style: AppTextStyles.heading),
               const SizedBox(height: AppSizes.spaceMd),
               _QuickActions(),
               const SizedBox(height: AppSizes.space2xl),
-              Text('Report Summary', style: AppTextStyles.heading),
+              Text(s.reportSummary, style: AppTextStyles.heading),
               const SizedBox(height: AppSizes.spaceMd),
-              _ReportSummaryCard(stats: stats, ref: ref),
+              _ReportSummaryCard(stats: stats, ref: ref, s: s),
             ],
           ),
         ),
@@ -118,7 +122,8 @@ class _NarrowBody extends StatelessWidget {
   final List<FarmModel> farms;
   final _DashboardStats stats;
   final WidgetRef ref;
-  const _NarrowBody({required this.farms, required this.stats, required this.ref});
+  final AppStrings s;
+  const _NarrowBody({required this.farms, required this.stats, required this.ref, required this.s});
 
   @override
   Widget build(BuildContext context) {
@@ -131,14 +136,14 @@ class _NarrowBody extends StatelessWidget {
         const SizedBox(height: AppSizes.space2xl),
         Text('Report Summary', style: AppTextStyles.heading),
         const SizedBox(height: AppSizes.spaceMd),
-        _ReportSummaryCard(stats: stats, ref: ref),
+        _ReportSummaryCard(stats: stats, ref: ref, s: s),
         const SizedBox(height: AppSizes.space2xl),
         Text('Farms', style: AppTextStyles.heading),
         const SizedBox(height: AppSizes.spaceMd),
         if (farms.isEmpty)
-          const _EmptyFarmsCard()
+          _EmptyFarmsCard(s: s)
         else
-          ...farms.map((f) => _FarmTile(farm: f)),
+          ...farms.map((f) => _FarmTile(farm: f, s: s)),
       ],
     );
   }
@@ -146,17 +151,18 @@ class _NarrowBody extends StatelessWidget {
 
 // ── Report summary card ──────────────────────────────────────────────────────
 class _ReportSummaryCard extends StatelessWidget {
+  final AppStrings s;
   final _DashboardStats stats;
   final WidgetRef ref;
-  const _ReportSummaryCard({required this.stats, required this.ref});
+  const _ReportSummaryCard({required this.stats, required this.ref, required this.s});
 
   @override
   Widget build(BuildContext context) {
     final rows = [
-      _SummaryRow(Icons.local_florist_rounded, 'Total plants',       '${stats.totalPlants}',          AppColors.leaf),
-      _SummaryRow(Icons.eco_rounded,            'Varieties in use',   '${stats.varieties.length}',     AppColors.canopy),
-      _SummaryRow(Icons.house_siding_rounded,   'Active greenhouses', '${stats.activeGreenhouses}',   AppColors.info),
-      _SummaryRow(Icons.warning_amber_rounded,  'Inactive',           '${stats.inactiveGreenhouses}', stats.inactiveGreenhouses > 0 ? AppColors.warning : AppColors.muted),
+      _SummaryRow(Icons.local_florist_rounded, s.totalPlants,       '${stats.totalPlants}',          AppColors.leaf),
+      _SummaryRow(Icons.eco_rounded,            s.varietiesInUse,   '${stats.varieties.length}',     AppColors.canopy),
+      _SummaryRow(Icons.house_siding_rounded,   s.activeGh, '${stats.activeGreenhouses}',   AppColors.info),
+      _SummaryRow(Icons.warning_amber_rounded,  s.inactiveLabel,           '${stats.inactiveGreenhouses}', stats.inactiveGreenhouses > 0 ? AppColors.warning : AppColors.muted),
       _SummaryRow(Icons.straighten_rounded,     'Total area',
           stats.totalAreaM2 > 0 ? '${stats.totalAreaM2.toStringAsFixed(0)} m²' : '—', AppColors.graphite),
     ];
@@ -281,16 +287,17 @@ class _Greeting extends StatelessWidget {
 
 // ── Health card ──────────────────────────────────────────────────────────────
 class _HealthCard extends StatelessWidget {
+  final AppStrings s;
   final _DashboardStats stats;
-  const _HealthCard({required this.stats});
+  const _HealthCard({required this.stats, required this.s});
 
   @override
   Widget build(BuildContext context) {
     final score = stats.healthScore;
-    final label = score >= 80 ? 'Excellent condition'
-        : score >= 60 ? 'Good condition'
-        : score >= 40 ? 'Needs attention'
-        : 'Critical — action required';
+    final label = score >= 80 ? s.excellentCond
+        : score >= 60 ? s.goodCond
+        : score >= 40 ? s.needsAttention
+        : s.criticalAction;
     return Container(
       width: double.infinity,
       padding: AppSizes.cardPaddingLg,
@@ -304,13 +311,13 @@ class _HealthCard extends StatelessWidget {
             blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Greenhouse Activation',
+        Text(s.ghActivation,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13)),
         const SizedBox(height: AppSizes.spaceSm),
         Text('$score%', style: const TextStyle(color: Colors.white,
             fontSize: 44, fontWeight: FontWeight.bold, height: 1)),
         const SizedBox(height: AppSizes.spaceSm),
-        Text('$label · ${stats.activeGreenhouses}/${stats.totalGreenhouses} greenhouses active',
+        Text('$label · ${stats.activeGreenhouses}/${stats.totalGreenhouses} ${s.activeGh}',
             style: const TextStyle(color: Colors.white, fontSize: 13)),
       ]),
     );
@@ -319,16 +326,17 @@ class _HealthCard extends StatelessWidget {
 
 // ── Stats grid ───────────────────────────────────────────────────────────────
 class _StatsGrid extends StatelessWidget {
+  final AppStrings s;
   final _DashboardStats stats;
-  const _StatsGrid({required this.stats});
+  const _StatsGrid({required this.stats, required this.s});
 
   @override
   Widget build(BuildContext context) {
     final cards = [
-      _StatCardData('Farms',       '${stats.totalFarms}',       Icons.agriculture_rounded,    AppColors.leaf),
-      _StatCardData('Greenhouses', '${stats.totalGreenhouses}', Icons.house_siding_rounded,   AppColors.info),
-      _StatCardData('Plantings',   '${stats.totalPlantings}',   Icons.local_florist_rounded,  AppColors.canopy),
-      _StatCardData('Varieties',   '${stats.varieties.length}', Icons.eco_rounded,            AppColors.nutrition),
+      _StatCardData(s.farms,       '${stats.totalFarms}',       Icons.agriculture_rounded,    AppColors.leaf),
+      _StatCardData(s.greenhouses, '${stats.totalGreenhouses}', Icons.house_siding_rounded,   AppColors.info),
+      _StatCardData(s.plantings,   '${stats.totalPlantings}',   Icons.local_florist_rounded,  AppColors.canopy),
+      _StatCardData(s.varieties,   '${stats.varieties.length}', Icons.eco_rounded,            AppColors.nutrition),
     ];
     return LayoutBuilder(builder: (context, c) {
       final cols = c.maxWidth >= 560 ? 4 : 2;
@@ -386,14 +394,15 @@ class _QuickActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
     final actions = [
-      (Icons.add_circle_outline_rounded, 'New Report', 1),
-      (Icons.map_outlined,               'Open Maps',  2),
-      (Icons.settings_outlined,          'Settings',   4),
+      (Icons.add_circle_outline_rounded, s.newReport, 1),
+      (Icons.map_outlined,               s.openMaps,  2),
+      (Icons.settings_outlined,          s.settings,   4),
     ];
     return Wrap(spacing: AppSizes.spaceSm, runSpacing: AppSizes.spaceSm,
       children: actions.map((a) {
-        final isPrimary = a.$2 == 'New Report';
+        final isPrimary = a.$2 == s.newReport;
         return Material(
           color: isPrimary ? AppColors.leaf : AppColors.surface,
           borderRadius: BorderRadius.circular(AppSizes.radiusMd),
@@ -426,7 +435,8 @@ class _QuickActions extends ConsumerWidget {
 // ── Farm tile ─────────────────────────────────────────────────────────────────
 class _FarmTile extends StatelessWidget {
   final FarmModel farm;
-  const _FarmTile({required this.farm});
+  final AppStrings s;
+  const _FarmTile({required this.farm, required this.s});
 
   @override
   Widget build(BuildContext context) {
@@ -481,7 +491,7 @@ class _FarmTile extends StatelessWidget {
                 color: pct >= 0.8 ? AppColors.mist : AppColors.severityBg('medium'),
                 borderRadius: BorderRadius.circular(AppSizes.radiusPill),
               ),
-              child: Text(pct >= 0.8 ? 'Active' : 'Check',
+              child: Text(pct >= 0.8 ? s.active : s.check,
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
                     color: pct >= 0.8 ? AppColors.leaf : AppColors.severityColor('medium'))),
             ),
@@ -498,7 +508,7 @@ class _FarmTile extends StatelessWidget {
                 color: AppColors.severityBg('medium'),
                 borderRadius: BorderRadius.circular(AppSizes.radiusPill),
               ),
-              child: Text('${g.code} inactive', style: TextStyle(fontSize: 11,
+              child: Text('${g.code} ${s.inactive}', style: TextStyle(fontSize: 11,
                   fontWeight: FontWeight.w600,
                   color: AppColors.severityColor('medium'))),
             )).toList()),
@@ -510,7 +520,8 @@ class _FarmTile extends StatelessWidget {
 
 // ── Empty / error states ──────────────────────────────────────────────────────
 class _EmptyFarmsCard extends StatelessWidget {
-  const _EmptyFarmsCard();
+  final AppStrings s;
+  const _EmptyFarmsCard({required this.s});
   @override
   Widget build(BuildContext context) => Container(
     width: double.infinity,
@@ -525,7 +536,7 @@ class _EmptyFarmsCard extends StatelessWidget {
       const SizedBox(height: AppSizes.spaceMd),
       Text('No farms yet', style: AppTextStyles.title),
       const SizedBox(height: 4),
-      Text('Farms you have access to will appear here.',
+      Text(s.noFarmsDesc,
           style: AppTextStyles.caption, textAlign: TextAlign.center),
     ]),
   );

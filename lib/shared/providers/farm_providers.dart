@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'farm_repository.dart';
+import '../../../core/session/user_session.dart';
 
 // ── Core providers ────────────────────────────────────────────────────────────
 
@@ -112,4 +113,11 @@ final teamProvider = FutureProvider<List<UserProfileModel>>((ref) async {
   if (user == null) return [];
   final repo = ref.watch(farmRepositoryProvider);
   return repo.getTeamMembers();
+});
+// -- Role helpers ---------------------------------------------------------
+
+final isManagerProvider = Provider<bool>((ref) {
+  ref.watch(authStateProvider); // rebuild on auth change
+  final profile = UserSession.currentProfile;
+  return profile == UserProfile.manager || profile == UserProfile.systemAdmin;
 });

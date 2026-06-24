@@ -1,16 +1,18 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/constants/motivational_messages.dart';
 import '../../../shared/widgets/app_shell.dart';
+import '../../../shared/providers/locale_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl  = TextEditingController();
   bool  _obscure   = true;
@@ -20,9 +22,10 @@ class _LoginScreenState extends State<LoginScreen> {
   final String _message =
       motivationalMessages[Random().nextInt(motivationalMessages.length)];
 
-  static const _green = Color(0xFF2E7D32);
-  static const _gold  = Color(0xFFD4AF37);
-  static const _bg    = Color(0xFFF5F4EF);
+  static const _green     = Color(0xFF2E7D32);
+  static const _gold      = Color(0xFFD4AF37);
+  static const _bg        = Color(0xFFF5F4EF);
+  static const _farmColor = Color(0xFF4A4A46);
 
   @override
   void dispose() {
@@ -32,10 +35,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    final s     = ref.read(stringsProvider);
     final email = _emailCtrl.text.trim();
     final pass  = _passCtrl.text.trim();
     if (email.isEmpty || pass.isEmpty) {
-      setState(() => _error = 'Please enter your email and password.');
+      setState(() => _error = s.errorEmptyFields);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -44,24 +48,23 @@ class _LoginScreenState extends State<LoginScreen> {
         email: email, password: pass,
       );
       if (response.user == null) {
-        setState(() { _error = 'Login failed. Check your credentials.'; _loading = false; });
+        setState(() { _error = s.errorLoginFailed; _loading = false; });
         return;
       }
       if (!mounted) return;
       setState(() => _loading = false);
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const AppShell()),
-      );
     } on AuthException catch (e) {
       setState(() { _error = e.message; _loading = false; });
     } catch (_) {
-      setState(() { _error = 'An unexpected error occurred.'; _loading = false; });
+      setState(() { _error = s.errorUnexpected; _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final w = MediaQuery.of(context).size.width;
+    final s    = ref.watch(stringsProvider);
+    final lang = ref.watch(localeProvider);
+    final w    = MediaQuery.of(context).size.width;
     final cardWidth = w < 600 ? (w - 48.0).clamp(280.0, 400.0) : 400.0;
 
     return Scaffold(
@@ -76,6 +79,15 @@ class _LoginScreenState extends State<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Center(child: Column(children: [
+                  // Language toggle — above logo
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    _LangBtn(label: 'EN', flag: '🇬🇧', active: lang == 'en',
+                        onTap: () => ref.read(localeProvider.notifier).setLanguage('en')),
+                    const SizedBox(width: 10),
+                    _LangBtn(label: 'SW', flag: '🇰🇪', active: lang == 'sw',
+                        onTap: () => ref.read(localeProvider.notifier).setLanguage('sw')),
+                  ]),
+                  const SizedBox(height: 20),
                   Container(
                     width: 96, height: 96,
                     decoration: BoxDecoration(
@@ -85,12 +97,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Icon(Icons.local_florist, size: 52, color: _green),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Flower Scout', style: TextStyle(
+                  Text(s.appName, style: const TextStyle(
                       fontSize: 30, fontWeight: FontWeight.bold,
                       color: Color(0xFF2C2C2A))),
                   const SizedBox(height: 4),
-                  const Text('Kongoni River Farm',
-                      style: TextStyle(fontSize: 15, color: Colors.grey)),
+                  Text(s.farmName, style: const TextStyle(
+                      fontSize: 15, color: _farmColor,
+                      fontWeight: FontWeight.w500)),
                 ])),
                 const SizedBox(height: 32),
                 Container(
@@ -105,19 +118,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('Sign in', style: TextStyle(
+                      Text(s.signIn, style: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.w700,
                           color: Color(0xFF2C2C2A))),
                       const SizedBox(height: 4),
-                      const Text('Welcome back to FlowerScout',
-                          style: TextStyle(fontSize: 13, color: Colors.grey)),
+                      Text(s.welcomeBack,
+                          style: const TextStyle(fontSize: 13, color: Colors.grey)),
                       const SizedBox(height: 24),
-                      _InputField(controller: _emailCtrl, label: 'Email',
+                      _InputField(controller: _emailCtrl, label: s.email,
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress),
                       const SizedBox(height: 14),
                       _InputField(
-                        controller: _passCtrl, label: 'Password',
+                        controller: _passCtrl, label: s.password,
                         icon: Icons.lock_outline, obscure: _obscure,
                         suffix: IconButton(
                           icon: Icon(_obscure
@@ -150,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: CircularProgressIndicator(
                                       color: Colors.white, strokeWidth: 2.5))
                               : const Icon(Icons.login),
-                          label: Text(_loading ? 'Signing in...' : 'Sign in',
+                          label: Text(_loading ? s.signingIn : s.signIn,
                               style: const TextStyle(
                                   fontSize: 15, fontWeight: FontWeight.w600)),
                           onPressed: _loading ? null : _handleLogin,
@@ -188,6 +201,34 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
+}
+
+class _LangBtn extends StatelessWidget {
+  final String label, flag;
+  final bool active;
+  final VoidCallback onTap;
+  const _LangBtn({required this.label, required this.flag,
+      required this.active, required this.onTap});
+  @override
+  Widget build(BuildContext context) => GestureDetector(
+    onTap: onTap,
+    child: AnimatedContainer(
+      duration: const Duration(milliseconds: 180),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: active ? const Color(0xFF2E7D32) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: active ? const Color(0xFF2E7D32) : const Color(0xFFDDDDDD)),
+      ),
+      child: Row(mainAxisSize: MainAxisSize.min, children: [
+        Text(flag, style: const TextStyle(fontSize: 14)),
+        const SizedBox(width: 5),
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+            color: active ? Colors.white : const Color(0xFF555555))),
+      ]),
+    ),
+  );
 }
 
 class _InputField extends StatelessWidget {

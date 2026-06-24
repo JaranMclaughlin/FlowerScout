@@ -1,698 +1,985 @@
-﻿// reports_screen.dart
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/theme/app_colors.dart';
 import '../../../shared/providers/farm_providers.dart';
 import '../../../shared/providers/farm_repository.dart';
+import '../../../shared/providers/locale_provider.dart';
+import '../../../shared/l10n/app_strings.dart';
 
+// ── Palette ───────────────────────────────────────────────────────────────────
+class _P {
+  static const bg        = Color(0xFFF5F6F8);
+  static const surface   = Color(0xFFFFFFFF);
+  static const border    = Color(0xFFE8ECE8);
+  static const ink       = Color(0xFF0F1F12);
+  static const graphite  = Color(0xFF3D4F42);
+  static const slate     = Color(0xFF7A8C7E);
+  static const forest    = Color(0xFF1B4332);
+  static const canopy    = Color(0xFF2D6A4F);
+  static const leaf      = Color(0xFF40916C);
+  static const mint      = Color(0xFF74C69D);
+  static const mist      = Color(0xFFD8F3DC);
+  static const red       = Color(0xFFB53030);
+  static const redBg     = Color(0xFFFDF0F0);
+  static const amber     = Color(0xFF9A5C00);
+  static const amberBg   = Color(0xFFFFF8ED);
+  static const blue      = Color(0xFF1565C0);
+  static const blueBg    = Color(0xFFEEF4FF);
+  static const divider   = Color(0xFFEDF1ED);
+}
+
+// ── Data models ───────────────────────────────────────────────────────────────
 class _Inspection {
-  final String date, gh, variety, type, severity, inspector;
+  final String id, date, gh, variety, category, severity, inspectorId;
+  final DateTime dateTime;
   const _Inspection({
-    required this.date, required this.gh, required this.variety,
-    required this.type, required this.severity, required this.inspector,
+    required this.id, required this.date, required this.gh,
+    required this.variety, required this.category,
+    required this.severity, required this.inspectorId,
+    required this.dateTime,
   });
+
+  factory _Inspection.fromRow(Map<String, dynamic> r, {String lang='en'}) {
+    final raw = r['submitted_at'] as String? ?? r['started_at'] as String? ?? '';
+    String date = '';
+    DateTime parsedDateTime = DateTime.now();
+    if (raw.isNotEmpty) {
+      final dt = DateTime.tryParse(raw);
+      if (dt != null) {
+        parsedDateTime = dt;
+        final months = AppStrings.of(lang).monthsShort;
+        date = '${dt.day.toString().padLeft(2,'0')} ${months[dt.month-1]} ${dt.year}';
+      }
+    }
+    final findings = r['inspection_findings'] as List?;
+    final topCat = findings != null && findings.isNotEmpty
+        ? (findings.first['category'] as String? ?? 'Other') : 'Other';
+    final topSev = findings != null && findings.isNotEmpty
+        ? (findings.first['severity'] as String? ?? 'Low') : 'Low';
+    final scoutId = r['scout_id']?.toString() ?? '';
+    return _Inspection(
+      id: r['id']?.toString() ?? '',
+      date: date,
+      dateTime: parsedDateTime,
+      gh: r['greenhouse_code'] as String? ?? r['greenhouse_id']?.toString() ?? '—',
+      variety: r['variety_name'] as String? ?? '—',
+      category: topCat, severity: topSev,
+      inspectorId: scoutId.length >= 8 ? scoutId.substring(0, 8) : scoutId,
+    );
+  }
 }
 
-class _PeriodData {
+class _GhRank { final String gh, topIssue; final int findings;
+  const _GhRank(this.gh, this.findings, this.topIssue); }
+
+class _ReportStats {
   final int total, disease, pest, critical;
-  final List<double> trendDisease, trendPest, trendWater;
-  final double sevCritical, sevHigh, sevMedium, sevLow;
-  final String aiInsight, aiRecommendation;
-  final List<String> chartLabels;
+  final Map<String, int> byCategory, bySeverity;
   final List<_GhRank> topGreenhouses;
-  const _PeriodData({
+  final List<double> trendDisease, trendPest, trendWater;
+  final List<String> chartLabels;
+  const _ReportStats({
     required this.total, required this.disease, required this.pest,
-    required this.critical, required this.trendDisease, required this.trendPest,
-    required this.trendWater, required this.sevCritical, required this.sevHigh,
-    required this.sevMedium, required this.sevLow, required this.aiInsight,
-    required this.aiRecommendation, required this.chartLabels,
-    required this.topGreenhouses,
+    required this.critical, required this.byCategory, required this.bySeverity,
+    required this.topGreenhouses, required this.trendDisease,
+    required this.trendPest, required this.trendWater, required this.chartLabels,
   });
+  static _ReportStats empty() => const _ReportStats(
+    total:0, disease:0, pest:0, critical:0,
+    byCategory:{}, bySeverity:{}, topGreenhouses:[],
+    trendDisease:[0,0,0,0,0,0,0], trendPest:[0,0,0,0,0,0,0],
+    trendWater:[0,0,0,0,0,0,0],
+    chartLabels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+  );
+
+  factory _ReportStats.fromRpcJson(Map<String,dynamic> json, String period, {String lang='en'}) {
+    late List<String> labels; late int n;
+    final _s=AppStrings.of(lang);
+    if (period=='today') { labels=_s.chartLabelsToday; n=7; }
+    else if (period=='30days') { labels=_s.chartLabels30Days; n=5; }
+    else if (period=='3months') { labels=_s.chartLabels3Months; n=3; }
+    else { labels=_s.chartLabelsWeek; n=7; }
+
+    final d=List<double>.filled(n,0.0), p=List<double>.filled(n,0.0), w=List<double>.filled(n,0.0);
+    final trendList=json['trend'] as List? ?? [];
+    for (final t in trendList) {
+      final idx=(t['idx'] as num).toInt().clamp(0,n-1);
+      d[idx]=(t['disease'] as num? ?? 0).toDouble();
+      p[idx]=(t['pest'] as num? ?? 0).toDouble();
+      w[idx]=(t['water'] as num? ?? 0).toDouble();
+    }
+
+    final byCatRaw=json['by_category'] as Map<String,dynamic>? ?? {};
+    final byCategory=byCatRaw.map((k,v)=>MapEntry(k,(v as num).toInt()));
+
+    final bySevRaw=json['by_severity'] as Map<String,dynamic>? ?? {};
+    final bySeverity=bySevRaw.map((k,v)=>MapEntry(k,(v as num).toInt()));
+
+    final topGhRaw=json['top_greenhouses'] as List? ?? [];
+    final topGreenhouses=topGhRaw.map((g)=>_GhRank(
+      g['gh'] as String? ?? '—',
+      (g['findings'] as num? ?? 0).toInt(),
+      g['top_issue'] as String? ?? 'Other',
+    )).toList();
+
+    return _ReportStats(
+      total:(json['total'] as num? ?? 0).toInt(),
+      disease:(json['disease'] as num? ?? 0).toInt(),
+      pest:(json['pest'] as num? ?? 0).toInt(),
+      critical:(json['critical'] as num? ?? 0).toInt(),
+      byCategory:byCategory, bySeverity:bySeverity,
+      topGreenhouses:topGreenhouses,
+      trendDisease:d, trendPest:p, trendWater:w,
+      chartLabels:labels,
+    );
+  }
+  factory _ReportStats.fromInspections(List<_Inspection> ins, String period, {String lang='en'}) {
+    int disease=0, pest=0, critical=0;
+    final byCategory=<String,int>{}, bySeverity=<String,int>{}, byGh=<String,Map<String,int>>{};
+    for (final r in ins) {
+      final cat=r.category.toLowerCase(), sev=r.severity.toLowerCase();
+      if (cat.contains('disease')) disease++;
+      if (cat.contains('pest')) pest++;
+      if (sev=='critical') critical++;
+      byCategory[r.category]=(byCategory[r.category]??0)+1;
+      bySeverity[r.severity]=(bySeverity[r.severity]??0)+1;
+      byGh.putIfAbsent(r.gh,()=>{});
+      byGh[r.gh]![r.category]=(byGh[r.gh]![r.category]??0)+1;
+    }
+    final topGh=byGh.entries.map((e){
+      final tot=e.value.values.fold(0,(a,b)=>a+b);
+      final top=e.value.entries.reduce((a,b)=>a.value>=b.value?a:b);
+      return _GhRank(e.key,tot,top.key);
+    }).toList()..sort((a,b)=>b.findings.compareTo(a.findings));
+    final buckets=_buildTrend(ins,period,lang);
+    return _ReportStats(
+      total:ins.length, disease:disease, pest:pest, critical:critical,
+      byCategory:byCategory, bySeverity:bySeverity,
+      topGreenhouses:topGh.take(3).toList(),
+      trendDisease:List<double>.from(buckets['disease']!),
+      trendPest:List<double>.from(buckets['pest']!),
+      trendWater:List<double>.from(buckets['water']!),
+      chartLabels:List<String>.from(buckets['labels']!),
+    );
+  }
+  static Map<String,List<dynamic>> _buildTrend(List<_Inspection> ins, String period, String lang) {
+    late List<String> labels; late int n;
+    // chart labels handled in fromRpcJson
+    if (period=='today') { labels=['6am','8am','10am','12pm','2pm','4pm','6pm']; n=7; }
+    else if (period=='30days') { labels=['W1','W2','W3','W4','W5']; n=5; }
+    else if (period=='3months') { labels=['M1','M2','M3']; n=3; }
+    else { labels=AppStrings.of(lang).chartLabelsWeek; n=7; }
+    final now=DateTime.now();
+    late DateTime since;
+    switch(period){
+      case 'today':   since=DateTime(now.year,now.month,now.day); break;
+      case '30days':  since=now.subtract(const Duration(days:30)); break;
+      case '3months': since=now.subtract(const Duration(days:90)); break;
+      default:        since=now.subtract(const Duration(days:7));
+    }
+    final d=List<double>.filled(n,0.0), p=List<double>.filled(n,0.0), w=List<double>.filled(n,0.0);
+    for (final r in ins) {
+      int idx;
+      if (period=='today') {
+        idx=((r.dateTime.hour-6)/2).floor().clamp(0,n-1);
+      } else if (period=='30days') {
+        idx=(r.dateTime.difference(since).inDays/7).floor().clamp(0,n-1);
+      } else if (period=='3months') {
+        idx=(r.dateTime.difference(since).inDays/30).floor().clamp(0,n-1);
+      } else {
+        idx=(r.dateTime.weekday-1).clamp(0,n-1);
+      }
+      final cat=r.category.toLowerCase();
+      if (cat.contains('disease')) { d[idx]++; }
+      else if (cat.contains('pest')) { p[idx]++; }
+      else if (cat.contains('water')) { w[idx]++; }
+    }
+    return {'disease':d,'pest':p,'water':w,'labels':labels};
+  }
 }
 
-class _GhRank {
-  final String gh, topIssue;
-  final int findings;
-  const _GhRank(this.gh, this.findings, this.topIssue);
+// ── Fetcher ───────────────────────────────────────────────────────────────────
+Future<List<_Inspection>> _fetchInspections(String period,
+    {String? farmId, String? greenhouseId, String? variety,
+     int offset=0, int limit=50, String lang='en'}) async {
+  final db=Supabase.instance.client;
+  final now=DateTime.now();
+  late DateTime since;
+  switch(period){
+    case 'today':   since=DateTime(now.year,now.month,now.day); break;
+    case '30days':  since=now.subtract(const Duration(days:30)); break;
+    case '3months': since=now.subtract(const Duration(days:90)); break;
+    default:        since=now.subtract(const Duration(days:7));
+  }
+  var q=db.from('inspection_reports').select('''
+    id, submitted_at, started_at, variety_name, greenhouse_id, scout_id,
+    greenhouses!inner(code),
+    inspection_findings(category, severity)
+  ''').gte('submitted_at',since.toIso8601String());
+  if (greenhouseId!=null) { q=q.eq('greenhouse_id',greenhouseId); }
+  else if (farmId!=null) { q=q.eq('greenhouses.farm_id',farmId); }
+  if (variety!=null) { q=q.eq('variety_name',variety); }
+  final rows=await q.order('submitted_at',ascending:false).range(offset,offset+limit-1);
+  return (rows as List).map((r){
+    final row=Map<String,dynamic>.from(r as Map);
+    final gh=row['greenhouses'];
+    if (gh is Map) row['greenhouse_code']=gh['code'];
+    return _Inspection.fromRow(row, lang: lang);
+  }).toList();
+}
+
+// ── Screen ────────────────────────────────────────────────────────────────────
+Future<Map<String,dynamic>> _fetchReportStatsRpc(String period,
+    {String? farmId, String? greenhouseId, String? variety}) async {
+  final db=Supabase.instance.client;
+  final now=DateTime.now();
+  late DateTime since;
+  switch(period){
+    case 'today':   since=DateTime(now.year,now.month,now.day); break;
+    case '30days':  since=now.subtract(const Duration(days:30)); break;
+    case '3months': since=now.subtract(const Duration(days:90)); break;
+    default:        since=now.subtract(const Duration(days:7));
+  }
+  final result=await db.rpc('get_report_stats', params: {
+    'p_since': since.toIso8601String(),
+    'p_farm_id': farmId,
+    'p_greenhouse_id': greenhouseId,
+    'p_variety': variety,
+    'p_period': period,
+  });
+  return result as Map<String,dynamic>;
 }
 
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
-  @override
-  ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
+  @override ConsumerState<ReportsScreen> createState()=>_ReportsScreenState();
 }
 
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
-  String _selectedDate       = 'Last 7 Days';
-  String _selectedFarm       = 'All Farms';
-  String _selectedGreenhouse = 'All';
-  String _selectedVariety    = 'All';
-  String _chartType          = 'Bar';
-  String _activeStatFilter   = 'all';
+  String _period='7days';
+  String? _farmId, _greenhouseId, _variety;
+  String _chartType='Bar';
+  String _activeFilter='all';
+  bool _showAllInspections=false;
+  bool _loadingMore=false;
+  bool _hasMore=true;
+  static const _pageSize=50;
+  List<_Inspection> _inspections=[];
+  _ReportStats _stats=_ReportStats.empty();
+  bool _loading=true;
+  String? _error;
 
-  static const List<String> _dateFilters = [
-    'Today', 'Last 7 Days', 'Last 30 Days', 'Last 3 Months',
-  ];
+  @override void initState(){ super.initState(); _load(); }
 
-  static const List<_Inspection> _allInspections = [
-    _Inspection(date: '08 Jun 2026', gh: 'GH-12', variety: 'Athena',     type: 'disease', severity: 'high',     inspector: 'John'),
-    _Inspection(date: '07 Jun 2026', gh: 'GH-01', variety: 'Moonwalk',   type: 'pest',    severity: 'medium',   inspector: 'Peter'),
-    _Inspection(date: '07 Jun 2026', gh: 'GH-25', variety: 'White Dove', type: 'water',   severity: 'low',      inspector: 'Mary'),
-    _Inspection(date: '06 Jun 2026', gh: 'GH-02', variety: 'Madam Red',  type: 'disease', severity: 'critical', inspector: 'John'),
-    _Inspection(date: '05 Jun 2026', gh: 'GH-03', variety: 'Explorer',   type: 'pest',    severity: 'low',      inspector: 'Grace'),
-    _Inspection(date: '04 Jun 2026', gh: 'GH-12', variety: 'Athena',     type: 'disease', severity: 'medium',   inspector: 'Peter'),
-    _Inspection(date: '03 Jun 2026', gh: 'GH-11', variety: 'Athena',     type: 'water',   severity: 'medium',   inspector: 'Mary'),
-  ];
+  Future<void> _load() async {
+    setState((){_loading=true;_error=null;_showAllInspections=false;_hasMore=true;});
+    try {
+      final results=await Future.wait([
+        _fetchInspections(_period,farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety,
+          offset:0,limit:_pageSize,lang:ref.read(localeProvider)),
+        _fetchReportStatsRpc(_period,farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety),
+      ]);
+      final data=results[0] as List<_Inspection>;
+      final statsJson=results[1] as Map<String,dynamic>;
+      if(mounted) setState((){
+        _inspections=data;
+        _hasMore=data.length==_pageSize;
+        _stats=_ReportStats.fromRpcJson(statsJson,_period,lang:ref.read(localeProvider));
+        _loading=false;
+      });
+    } catch(e){ if(mounted) setState((){_error=e.toString();_loading=false;}); }
+  }
 
-  static final Map<String, _PeriodData> _periodData = {
-    'Today': _PeriodData(
-      total: 12, disease: 7, pest: 4, critical: 1,
-      trendDisease: [1, 2, 4, 2, 3, 4], trendPest: [2, 1, 3, 1, 2, 2], trendWater: [1, 0, 1, 2, 1, 2],
-      sevCritical: 8, sevHigh: 25, sevMedium: 42, sevLow: 25,
-      chartLabels: ['6am', '8am', '10am', '12pm', '2pm', '4pm'],
-      aiInsight: "Disease is 58% of today's findings — above typical daily average.",
-      aiRecommendation: 'Inspect GH-12 Athena section. Botrytis symptoms flagged by 2 scouts in the last 3 hours.',
-      topGreenhouses: [_GhRank('GH-12', 5, 'Disease'), _GhRank('GH-01', 4, 'Pest'), _GhRank('GH-25', 3, 'Water Stress')],
-    ),
-    'Last 7 Days': _PeriodData(
-      total: 128, disease: 87, pest: 56, critical: 14,
-      trendDisease: [15, 22, 30, 20, 28, 48, 34], trendPest: [8, 12, 18, 14, 16, 20, 15], trendWater: [5, 8, 10, 7, 9, 12, 8],
-      sevCritical: 11, sevHigh: 28, sevMedium: 38, sevLow: 23,
-      chartLabels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-      aiInsight: 'Disease findings are +18% above the 30-day average. Wednesday was the peak day.',
-      aiRecommendation: 'Inspect GH-12 Athena section immediately. Disease incidence increased 23% vs last week. Schedule GH-02 Madam Red follow-up.',
-      topGreenhouses: [_GhRank('GH-12', 38, 'Disease'), _GhRank('GH-01', 27, 'Pest'), _GhRank('GH-25', 19, 'Water Stress')],
-    ),
-    'Last 30 Days': _PeriodData(
-      total: 340, disease: 198, pest: 102, critical: 28,
-      trendDisease: [40, 58, 80, 52], trendPest: [20, 30, 42, 35], trendWater: [12, 18, 22, 18],
-      sevCritical: 8, sevHigh: 30, sevMedium: 40, sevLow: 22,
-      chartLabels: ['W1', 'W2', 'W3', 'W4'],
-      aiInsight: 'Disease accounts for 58% of findings. Pest pressure declining across GH-01 and GH-03.',
-      aiRecommendation: 'Prioritise GH-12 for a full disease audit. Consider preventive fungicide on Athena and Madam Red before end of month.',
-      topGreenhouses: [_GhRank('GH-12', 110, 'Disease'), _GhRank('GH-01', 78, 'Pest'), _GhRank('GH-02', 55, 'Disease')],
-    ),
-    'Last 3 Months': _PeriodData(
-      total: 820, disease: 450, pest: 280, critical: 60,
-      trendDisease: [90, 130, 180, 120, 160, 220], trendPest: [50, 70, 95, 80, 90, 110], trendWater: [30, 40, 50, 40, 50, 65],
-      sevCritical: 7, sevHigh: 32, sevMedium: 38, sevLow: 23,
-      chartLabels: ['Apr W1', 'Apr W2', 'May W1', 'May W2', 'Jun W1', 'Jun W2'],
-      aiInsight: 'Disease trend is consistently upward over 90 days — a structural issue, not seasonal.',
-      aiRecommendation: 'Recommend crop rotation review for Athena in GH-12. Disease grew 45% quarter-over-quarter. Engage agronomist for soil and environment audit.',
-      topGreenhouses: [_GhRank('GH-12', 280, 'Disease'), _GhRank('GH-01', 195, 'Pest'), _GhRank('GH-02', 140, 'Disease')],
-    ),
+  Future<void> _loadMore() async {
+    if(_loadingMore || !_hasMore) return;
+    setState(()=>_loadingMore=true);
+    try {
+      final more=await _fetchInspections(_period,
+        farmId:_farmId,greenhouseId:_greenhouseId,variety:_variety,
+        offset:_inspections.length,limit:_pageSize,lang:ref.read(localeProvider));
+      if(mounted) setState((){
+        _inspections=[..._inspections,...more];
+        _hasMore=more.length==_pageSize;
+        _loadingMore=false;
+      });
+    } catch(e){ if(mounted) setState(()=>_loadingMore=false); }
+  }
+
+  List<_Inspection> get _filtered {
+    if (_activeFilter=='all') return _inspections;
+    if (_activeFilter=='critical') return _inspections.where((r)=>r.severity.toLowerCase()=='critical').toList();
+    return _inspections.where((r)=>r.category.toLowerCase().contains(_activeFilter)).toList();
+  }
+
+  Color _catColor(String cat) {
+    final c=cat.toLowerCase();
+    if (c.contains('disease')) return _P.red;
+    if (c.contains('pest')) return _P.amber;
+    if (c.contains('water')) return _P.blue;
+    if (c.contains('nutri')) return _P.leaf;
+    if (c.contains('irrig')) return const Color(0xFF00838F);
+    return _P.slate;
+  }
+
+  Color _sevColor(String s) => switch(s.toLowerCase()){
+    'critical'=>const Color(0xFF7A1F1F),
+    'high'=>_P.red,
+    'medium'=>_P.amber,
+    _=>_P.leaf,
   };
-
-  List<String> _farmNames(List<FarmModel> farms) =>
-      ['All Farms', ...farms.map((f) => f.name)];
-
-  List<String> _greenhouseOptions(List<FarmModel> farms) {
-    if (_selectedFarm == 'All Farms') return ['All'];
-    final farm = farms.firstWhere((f) => f.name == _selectedFarm,
-        orElse: () => farms.first);
-    return ['All', ...farm.greenhouses.map((g) => g.code)];
-  }
-
-  List<String> _varietyOptions(List<FarmModel> farms) {
-    if (_selectedGreenhouse == 'All') return ['All'];
-    for (final farm in farms) {
-      final matches = farm.greenhouses.where((g) => g.code == _selectedGreenhouse).toList();
-      if (matches.isNotEmpty) return ['All', ...matches.first.varietyNames];
-    }
-    return ['All'];
-  }
-
-  _PeriodData get _data => _periodData[_selectedDate] ?? _periodData['Last 7 Days']!;
-
-  List<_Inspection> get _filteredInspections {
-    final list = _allInspections.toList();
-    if (_activeStatFilter == 'critical') return list.where((r) => r.severity == 'critical').toList();
-    if (_activeStatFilter != 'all') return list.where((r) => r.type == _activeStatFilter).toList();
-    return list;
-  }
-
-  Color _severityColor(String s) => switch (s) {
-    'critical' => const Color(0xFF7A1F1F),
-    'high'     => const Color(0xFFA32D2D),
-    'medium'   => const Color(0xFF854F0B),
-    _          => const Color(0xFF3B6D11),
-  };
-
-  Color _typeColor(String t) => switch (t) {
-    'disease' => const Color(0xFFA32D2D),
-    'pest'    => const Color(0xFF854F0B),
-    'water'   => AppColors.info,
-    _         => Colors.grey,
-  };
-
-  String _typeLabel(String t) => switch (t) {
-    'disease' => 'Disease',
-    'pest'    => 'Pest',
-    'water'   => 'Water Stress',
-    _         => t,
-  };
-
-  void _showExportDialog(String type) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: Text('Export ${type == 'pdf' ? 'PDF' : 'Excel'}'),
-        content: Text(type == 'pdf'
-            ? 'A PDF report will be generated for the current filters and saved to your device.'
-            : 'An Excel (.xlsx) file with all inspection data will be saved to your device.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () { Navigator.pop(ctx); _triggerExport(type); },
-            child: const Text('Download'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _triggerExport(String type) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text('${type == 'pdf' ? 'PDF' : 'Excel'} export ready — $_selectedFarm · $_selectedDate'),
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-    ));
-  }
 
   @override
   Widget build(BuildContext context) {
-    final farmsAsync = ref.watch(farmsProvider);
-    final data = _data;
+    final farmsAsync=ref.watch(farmsProvider);
+    final s=ref.watch(stringsProvider);
     return Container(
-      color: AppColors.background,
+      color: _P.bg,
       child: farmsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.leaf)),
-        error: (e, _) => Center(child: Text('Error: $e')),
-        data: (farms) => SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Reports & Analytics',
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              const Text('Inspection trends, findings and performance',
-                  style: TextStyle(color: Colors.grey, fontSize: 14)),
-              const SizedBox(height: 20),
-              _buildAiCard(data),
-              const SizedBox(height: 20),
-              Row(children: [
-                Expanded(child: _exportButton(icon: Icons.picture_as_pdf, label: 'Export PDF',
-                    color: const Color(0xFFA32D2D), onTap: () => _showExportDialog('pdf'))),
-                const SizedBox(width: 12),
-                Expanded(child: _exportButton(icon: Icons.table_chart, label: 'Export Excel',
-                    color: const Color(0xFF3B6D11), onTap: () => _showExportDialog('excel'))),
-              ]),
-              const SizedBox(height: 20),
-              LayoutBuilder(builder: (context, con) {
-                final w = (con.maxWidth - 10) / 2;
-                final ghOptions  = _greenhouseOptions(farms);
-                final varOptions = _varietyOptions(farms);
-                final safeGH  = ghOptions.contains(_selectedGreenhouse)  ? _selectedGreenhouse  : 'All';
-                final safeVar = varOptions.contains(_selectedVariety)     ? _selectedVariety     : 'All';
-                return Wrap(spacing: 10, runSpacing: 10, children: [
-                  SizedBox(width: w, child: _dropdown(label: 'Date Range', value: _selectedDate,
-                      items: _dateFilters, onChanged: (v) => setState(() => _selectedDate = v!))),
-                  SizedBox(width: w, child: _dropdown(label: 'Farm', value: _selectedFarm,
-                      items: _farmNames(farms), onChanged: (v) => setState(() {
-                        _selectedFarm = v!; _selectedGreenhouse = 'All'; _selectedVariety = 'All';
-                      }))),
-                  SizedBox(width: w, child: _dropdown(label: 'Greenhouse', value: safeGH,
-                      items: ghOptions, onChanged: (v) => setState(() {
-                        _selectedGreenhouse = v!; _selectedVariety = 'All';
-                      }))),
-                  SizedBox(width: w, child: _dropdown(label: 'Variety', value: safeVar,
-                      items: varOptions, onChanged: (v) => setState(() => _selectedVariety = v!))),
-                ]);
-              }),
-              const SizedBox(height: 24),
-              LayoutBuilder(builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 600;
-                if (isWide) {
-                  return Row(children: [
-                    Expanded(child: _statCard(id: 'all',      label: 'Inspections', value: data.total,    icon: Icons.assignment_outlined,   color: const Color(0xFF2D6A2D), trend: '+12%', trendUp: true)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _statCard(id: 'disease',  label: 'Disease',     value: data.disease,  icon: Icons.coronavirus_outlined,  color: const Color(0xFFB53030), trend: '+18%', trendUp: false)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _statCard(id: 'pest',     label: 'Pests',       value: data.pest,     icon: Icons.bug_report_outlined,   color: const Color(0xFF9A5C00), trend: '-5%',  trendUp: true)),
-                    const SizedBox(width: 8),
-                    Expanded(child: _statCard(id: 'critical', label: 'Critical',    value: data.critical, icon: Icons.warning_amber_rounded, color: const Color(0xFF7A1F1F), trend: '+3',   trendUp: false)),
-                  ]);
-                }
-                return SizedBox(height: 100, child: ListView(scrollDirection: Axis.horizontal, children: [
-                  SizedBox(width: 130, child: _statCard(id: 'all',      label: 'Inspections', value: data.total,    icon: Icons.assignment_outlined,   color: const Color(0xFF2D6A2D), trend: '+12%', trendUp: true)),
-                  const SizedBox(width: 8),
-                  SizedBox(width: 130, child: _statCard(id: 'disease',  label: 'Disease',     value: data.disease,  icon: Icons.coronavirus_outlined,  color: const Color(0xFFB53030), trend: '+18%', trendUp: false)),
-                  const SizedBox(width: 8),
-                  SizedBox(width: 130, child: _statCard(id: 'pest',     label: 'Pests',       value: data.pest,     icon: Icons.bug_report_outlined,   color: const Color(0xFF9A5C00), trend: '-5%',  trendUp: true)),
-                  const SizedBox(width: 8),
-                  SizedBox(width: 130, child: _statCard(id: 'critical', label: 'Critical',    value: data.critical, icon: Icons.warning_amber_rounded, color: const Color(0xFF7A1F1F), trend: '+3',   trendUp: false)),
-                ]));
-              }),
-              const SizedBox(height: 24),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                const Text('Findings Trend', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                _chartToggle(),
-              ]),
-              const SizedBox(height: 8),
-              _trendLegend(),
-              const SizedBox(height: 10),
-              Container(
-                height: 220, width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-                child: _chartType == 'Bar' ? _buildBarChart(data) : _buildLineChart(data),
+        loading:()=>const Center(child:CircularProgressIndicator(color:AppColors.leaf)),
+        error:(e,_)=>Center(child:Text('Error: $e')),
+        data:(farms)=>RefreshIndicator(
+          color:AppColors.leaf,
+          onRefresh:_load,
+          child:SingleChildScrollView(
+            physics:const AlwaysScrollableScrollPhysics(),
+            child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+              _buildHeader(s, farms),
+              const SizedBox(height:24),
+              Padding(
+                padding:const EdgeInsets.symmetric(horizontal:24),
+                child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                  if(_loading) _buildSkeleton()
+                  else if(_error!=null) _buildError(s)
+                  else ...[
+                    _buildKpiRow(s),
+                    const SizedBox(height:24),
+                    _buildChartCard(s),
+                    const SizedBox(height:24),
+                    Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                      Expanded(flex:5,child:_buildSeverityCard(s)),
+                      const SizedBox(width:16),
+                      Expanded(flex:5,child:_buildTopGhCard(s)),
+                    ]),
+                    const SizedBox(height:24),
+                    _buildCategoryCard(s),
+                    const SizedBox(height:24),
+                    _buildInspectionTable(s),
+                  ],
+                  const SizedBox(height:40),
+                ]),
               ),
-              const SizedBox(height: 24),
-              const Text('Severity Breakdown', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              _severitySection(data),
-              const SizedBox(height: 24),
-              const Text('Top Problem Categories', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              _categoryTile('Disease',      42, const Color(0xFFE24B4A), '+4%', false),
-              _categoryTile('Pests',        28, const Color(0xFFEF9F27), '-2%', true),
-              _categoryTile('Water Stress', 15, const Color(0xFF378ADD), '0%',  true),
-              _categoryTile('Nutrition',    10, const Color(0xFF639922), '-1%', true),
-              _categoryTile('Other',         5, Colors.grey,             '—',   true),
-              const SizedBox(height: 24),
-              const Text('Top Greenhouses by Findings', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 10),
-              _topGreenhousesSection(data),
-              const SizedBox(height: 24),
-              Row(children: [
-                const Text('Recent Inspections', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                if (_activeStatFilter != 'all') ...[
-                  const SizedBox(width: 8),
-                  _chip(_typeLabel(_activeStatFilter), AppColors.info, const Color(0xFFE6F1FB)),
-                ],
-              ]),
-              const SizedBox(height: 10),
-              _inspectionList(),
-              const SizedBox(height: 32),
-            ],
+            ]),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildAiCard(_PeriodData data) => Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(colors: [Color(0xFF1B4D1B), Color(0xFF2D6A2D)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight),
-      borderRadius: BorderRadius.all(Radius.circular(16)),
-    ),
-    padding: const EdgeInsets.all(14),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        Container(padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: const BorderRadius.all(Radius.circular(8))),
-          child: const Icon(Icons.auto_awesome, size: 13, color: Colors.white)),
-        const SizedBox(width: 7),
-        const Text('AI Insight', style: TextStyle(color: Colors.white,
-            fontWeight: FontWeight.w700, fontSize: 13)),
+  // ── Header with filters ──────────────────────────────────────────────────
+  Widget _buildHeader(AppStrings s, List<FarmModel> farms) {
+    final farmItems=<String,String?>{'All Farms':null};
+    for(final f in farms) farmItems[f.name]=f.id;
+    final ghItems=<String,String?>{'All':null};
+    if(_farmId!=null){
+      final farm=farms.firstWhere((f)=>f.id==_farmId,orElse:()=>farms.first);
+      for(final g in farm.greenhouses) ghItems[g.code]=g.id;
+    }
+    final varItems=<String,String?>{'All':null};
+    if(_greenhouseId!=null){
+      for(final f in farms) for(final g in f.greenhouses){
+        if(g.id==_greenhouseId) for(final v in g.varietyNames) varItems[v]=v;
+      }
+    }
+    final periodItems={s.today:'today',s.last7Days:'7days',s.last30Days:'30days',s.last3Months:'3months'};
+
+    return Container(
+      color:_P.surface,
+      padding:const EdgeInsets.fromLTRB(24,24,24,20),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(children:[
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(s.reportsAnalytics,
+              style:const TextStyle(fontSize:26,fontWeight:FontWeight.w800,
+                color:_P.ink,letterSpacing:-0.5)),
+            const SizedBox(height:4),
+            Text(s.reportsSubtitle,
+              style:const TextStyle(fontSize:13,color:_P.slate)),
+          ])),
+          const SizedBox(width:16),
+          _exportChip(Icons.picture_as_pdf_outlined,'PDF',_P.red,()=>_showExport('pdf',s)),
+          const SizedBox(width:8),
+          _exportChip(Icons.table_chart_outlined,'Excel',_P.leaf,()=>_showExport('excel',s)),
+        ]),
+        const SizedBox(height:20),
+        const Divider(height:1,color:_P.divider),
+        const SizedBox(height:16),
+        SingleChildScrollView(scrollDirection:Axis.horizontal,
+          child:Row(children:[
+            _filterPill(s.dateRange,
+              periodItems.entries.firstWhere((e)=>e.value==_period,
+                orElse:()=>periodItems.entries.first).key,
+              periodItems.keys.toList(),(v){
+                _period=periodItems[v]!; _load();
+              }),
+            const SizedBox(width:10),
+            _filterPill('Farm',
+              farmItems.entries.firstWhere((e)=>e.value==_farmId,
+                orElse:()=>farmItems.entries.first).key,
+              farmItems.keys.toList(),(v){
+                setState((){_farmId=farmItems[v!];_greenhouseId=null;_variety=null;});
+                _load();
+              }),
+            const SizedBox(width:10),
+            _filterPill('Greenhouse',
+              ghItems.entries.firstWhere((e)=>e.value==_greenhouseId,
+                orElse:()=>ghItems.entries.first).key,
+              ghItems.keys.toList(),(v){
+                setState((){_greenhouseId=ghItems[v!];_variety=null;});
+                _load();
+              }),
+            const SizedBox(width:10),
+            _filterPill('Variety',
+              varItems.entries.firstWhere((e)=>e.value==_variety,
+                orElse:()=>varItems.entries.first).key,
+              varItems.keys.toList(),(v){
+                setState(()=>_variety=varItems[v!]);
+                _load();
+              }),
+          ])),
       ]),
-      const SizedBox(height: 8),
-      Text(data.aiInsight, style: TextStyle(color: Colors.white.withValues(alpha: 0.9),
-          fontSize: 12, height: 1.4)),
-      const SizedBox(height: 8),
-      Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.1),
-          borderRadius: const BorderRadius.all(Radius.circular(12)),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+    );
+  }
+
+  Widget _exportChip(IconData icon, String label, Color color, VoidCallback onTap)=>
+    Material(color:color.withValues(alpha:0.08),borderRadius:BorderRadius.circular(8),
+      child:InkWell(borderRadius:BorderRadius.circular(8),onTap:onTap,
+        child:Padding(padding:const EdgeInsets.symmetric(horizontal:12,vertical:8),
+          child:Row(mainAxisSize:MainAxisSize.min,children:[
+            Icon(icon,size:15,color:color),
+            const SizedBox(width:5),
+            Text(label,style:TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:color)),
+          ]))));
+
+  Widget _filterPill(String label, String value, List<String> items, ValueChanged<String?> onChanged)=>
+    Container(
+      padding:const EdgeInsets.symmetric(horizontal:12,vertical:6),
+      decoration:BoxDecoration(color:_P.bg,borderRadius:BorderRadius.circular(8),
+        border:Border.all(color:_P.border)),
+      child:DropdownButtonHideUnderline(child:DropdownButton<String>(
+        value:items.contains(value)?value:items.first,
+        isDense:true,
+        style:const TextStyle(fontSize:12,color:_P.ink,fontWeight:FontWeight.w500),
+        icon:const Icon(Icons.keyboard_arrow_down_rounded,size:16,color:_P.slate),
+        items:items.map((e)=>DropdownMenuItem(value:e,child:Text(e))).toList(),
+        onChanged:onChanged,
+      )),
+    );
+
+  // ── KPI row ──────────────────────────────────────────────────────────────
+  Widget _buildKpiRow(AppStrings s) {
+    final kpis=[
+      _KpiData(id:'all',    label:s.inspections, value:_stats.total,
+        icon:Icons.assignment_outlined,      color:_P.forest,  bg:_P.mist),
+      _KpiData(id:'disease',label:s.disease,     value:_stats.disease,
+        icon:Icons.coronavirus_outlined,     color:_P.red,     bg:_P.redBg),
+      _KpiData(id:'pest',   label:s.pests,       value:_stats.pest,
+        icon:Icons.bug_report_outlined,      color:_P.amber,   bg:_P.amberBg),
+      _KpiData(id:'critical',label:s.critical,   value:_stats.critical,
+        icon:Icons.warning_amber_rounded,    color:const Color(0xFF7A1F1F), bg:const Color(0xFFFDE8E8)),
+    ];
+    return LayoutBuilder(builder:(_,con){
+      if(con.maxWidth>600){
+        return Row(children:kpis.expand((k)=>[
+          Expanded(child:_kpiCard(k)),const SizedBox(width:12)]).toList()..removeLast());
+      }
+      return GridView.count(crossAxisCount:2,shrinkWrap:true,
+        physics:const NeverScrollableScrollPhysics(),
+        crossAxisSpacing:12,mainAxisSpacing:12,childAspectRatio:1.8,
+        children:kpis.map((k)=>_kpiCard(k)).toList());
+    });
+  }
+
+  Widget _kpiCard(_KpiData k) {
+    final active=_activeFilter==k.id;
+    return GestureDetector(
+      onTap:()=>setState(()=>_activeFilter=k.id),
+      child:AnimatedContainer(duration:const Duration(milliseconds:180),
+        padding:const EdgeInsets.all(16),
+        decoration:BoxDecoration(
+          color:active?k.color:_P.surface,
+          borderRadius:BorderRadius.circular(14),
+          border:Border.all(color:active?k.color:_P.border,width:active?2:1),
+          boxShadow:active?[BoxShadow(color:k.color.withValues(alpha:0.2),blurRadius:12,offset:const Offset(0,4))]:
+            [BoxShadow(color:Colors.black.withValues(alpha:0.03),blurRadius:6,offset:const Offset(0,2))],
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Icon(Icons.arrow_right_alt, size: 14, color: Colors.white),
-          const SizedBox(width: 6),
-          Expanded(child: Text(data.aiRecommendation,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.85),
-                  fontSize: 11, height: 1.4))),
+        child:Row(children:[
+          Container(width:40,height:40,
+            decoration:BoxDecoration(color:active?Colors.white.withValues(alpha:0.2):k.bg,
+              borderRadius:BorderRadius.circular(10)),
+            child:Icon(k.icon,color:active?Colors.white:k.color,size:20)),
+          const SizedBox(width:12),
+          Column(crossAxisAlignment:CrossAxisAlignment.start,mainAxisSize:MainAxisSize.min,children:[
+            Text('${k.value}',style:TextStyle(fontSize:24,fontWeight:FontWeight.w800,
+              color:active?Colors.white:_P.ink,height:1)),
+            const SizedBox(height:2),
+            Text(k.label,style:TextStyle(fontSize:11,color:active?Colors.white70:_P.slate,
+              fontWeight:FontWeight.w500)),
+          ]),
         ]),
       ),
-    ]),
-  );
+    );
+  }
 
-  Widget _severitySection(_PeriodData data) {
-    final sections = [
-      PieChartSectionData(value: data.sevCritical, color: const Color(0xFF7A1F1F), title: '', radius: 50),
-      PieChartSectionData(value: data.sevHigh,     color: const Color(0xFFA32D2D), title: '', radius: 50),
-      PieChartSectionData(value: data.sevMedium,   color: const Color(0xFFEF9F27), title: '', radius: 50),
-      PieChartSectionData(value: data.sevLow,      color: const Color(0xFF3B6D11), title: '', radius: 50),
-    ];
-    final labels = [
-      ('Critical', '${data.sevCritical.toInt()}%', const Color(0xFF7A1F1F)),
-      ('High',     '${data.sevHigh.toInt()}%',     const Color(0xFFA32D2D)),
-      ('Medium',   '${data.sevMedium.toInt()}%',   const Color(0xFFEF9F27)),
-      ('Low',      '${data.sevLow.toInt()}%',       const Color(0xFF3B6D11)),
-    ];
+  // ── Trend chart ───────────────────────────────────────────────────────────
+  Widget _buildChartCard(AppStrings s) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18)),
-      child: Row(children: [
-        SizedBox(width: 130, height: 130,
-          child: PieChart(PieChartData(sections: sections, sectionsSpace: 2,
-              centerSpaceRadius: 30, borderData: FlBorderData(show: false)))),
-        const SizedBox(width: 20),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: labels.map((l) => Padding(
-            padding: const EdgeInsets.symmetric(vertical: 5),
-            child: Row(children: [
-              Container(width: 10, height: 10,
-                  decoration: BoxDecoration(color: l.$3, shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-              Expanded(child: Text(l.$1, style: const TextStyle(fontSize: 13))),
-              Text(l.$2, style: TextStyle(fontSize: 13,
-                  fontWeight: FontWeight.bold, color: l.$3)),
-            ]),
-          )).toList(),
-        )),
+      padding:const EdgeInsets.all(20),
+      decoration:_card(),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Row(children:[
+          Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+            Text(s.findingsTrend,
+              style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink)),
+            const SizedBox(height:2),
+            Text('By category over period',
+              style:const TextStyle(fontSize:11,color:_P.slate)),
+          ])),
+          _segmented(),
+        ]),
+        const SizedBox(height:6),
+        _legend(s),
+        const SizedBox(height:16),
+        SizedBox(height:200,
+          child:_chartType=='Bar'?_barChart():_lineChart()),
       ]),
     );
   }
 
-  Widget _topGreenhousesSection(_PeriodData data) {
-    final maxF = data.topGreenhouses.fold(0, (m, g) => g.findings > m ? g.findings : m).toDouble();
-    final medalColors = [const Color(0xFFBA7517), const Color(0xFF888780), const Color(0xFF854F0B)];
-    return Container(
-      decoration: const BoxDecoration(color: Colors.white,
-          borderRadius: BorderRadius.all(Radius.circular(16))),
-      child: Column(children: data.topGreenhouses.asMap().entries.map((entry) {
-        final rank = entry.key + 1;
-        final gh   = entry.value;
-        final pct  = maxF > 0 ? gh.findings / maxF : 0.0;
-        final ic   = _typeColor(gh.topIssue.toLowerCase().replaceAll(' stress', ''));
-        return Column(children: [
-          Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(children: [
-              Container(width: 26, height: 26,
-                decoration: BoxDecoration(color: medalColors[rank-1].withValues(alpha: 0.12),
-                    shape: BoxShape.circle),
-                child: Center(child: Text('#$rank', style: TextStyle(fontSize: 11,
-                    fontWeight: FontWeight.bold, color: medalColors[rank-1])))),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(gh.gh, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                const SizedBox(height: 4),
-                ClipRRect(borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(value: pct, minHeight: 5,
-                      backgroundColor: Colors.grey.shade100,
-                      valueColor: AlwaysStoppedAnimation<Color>(ic))),
-              ])),
-              const SizedBox(width: 12),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text('${gh.findings}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                const SizedBox(height: 2),
-                _chip(gh.topIssue, ic, ic.withValues(alpha: 0.1)),
-              ]),
-            ])),
-          if (rank < data.topGreenhouses.length)
-            const Divider(height: 1, indent: 16, endIndent: 16),
-        ]);
-      }).toList()),
-    );
-  }
+  Widget _segmented()=>Row(children:['Bar','Line'].map((t){
+    final active=_chartType==t;
+    return GestureDetector(
+      onTap:()=>setState(()=>_chartType=t),
+      child:Container(
+        margin:const EdgeInsets.only(left:4),
+        padding:const EdgeInsets.symmetric(horizontal:10,vertical:5),
+        decoration:BoxDecoration(
+          color:active?_P.forest:Colors.transparent,
+          borderRadius:BorderRadius.circular(6),
+          border:Border.all(color:active?_P.forest:_P.border),
+        ),
+        child:Text(t,style:TextStyle(fontSize:11,fontWeight:FontWeight.w600,
+          color:active?Colors.white:_P.slate))));
+  }).toList());
 
-  Widget _inspectionList() {
-    final rows = _filteredInspections;
-    return Container(
-      decoration: const BoxDecoration(color: Colors.white,
-          borderRadius: BorderRadius.all(Radius.circular(16))),
-      child: rows.isEmpty
-          ? const Padding(padding: EdgeInsets.all(20),
-              child: Text('No inspections match this filter.',
-                  style: TextStyle(color: Colors.grey)))
-          : Column(children: rows.asMap().entries.map((entry) {
-              final i = entry.key;
-              final r = entry.value;
-              return Column(children: [
-                Material(color: Colors.transparent, child: ListTile(
-                  onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text('Opening: ${r.date} · ${r.gh} · ${r.variety}'),
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  )),
-                  title: Text('${r.date} · ${r.gh} · ${r.variety}',
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                  subtitle: Padding(padding: const EdgeInsets.only(top: 4),
-                    child: Wrap(spacing: 6, runSpacing: 4, children: [
-                      _chip(_typeLabel(r.type), _typeColor(r.type),
-                          _typeColor(r.type).withValues(alpha: 0.1)),
-                      _chip(r.severity[0].toUpperCase() + r.severity.substring(1),
-                          _severityColor(r.severity),
-                          _severityColor(r.severity).withValues(alpha: 0.1)),
-                      Text(r.inspector, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                    ])),
-                  trailing: const Icon(Icons.chevron_right, color: Colors.grey, size: 18),
-                )),
-                if (i < rows.length - 1) const Divider(height: 1, indent: 16, endIndent: 16),
-              ]);
-            }).toList()),
-    );
-  }
+  Widget _legend(AppStrings s)=>Wrap(spacing:16,children:[
+    (_P.leaf,s.disease),(_P.amber,s.pests),(_P.blue,'Water'),
+  ].map((i)=>Row(mainAxisSize:MainAxisSize.min,children:[
+    Container(width:8,height:8,decoration:BoxDecoration(color:i.$1,shape:BoxShape.circle)),
+    const SizedBox(width:4),
+    Text(i.$2,style:const TextStyle(fontSize:11,color:_P.slate)),
+  ])).toList());
 
-  Widget _buildBarChart(_PeriodData data) {
-    final labels = data.chartLabels;
-    final maxY   = data.trendDisease.reduce((a, b) => a > b ? a : b) * 1.25;
-    final count  = labels.length;
+  Widget _barChart(){
+    final d=_stats; final labels=d.chartLabels;
+    final maxY=[...d.trendDisease,...d.trendPest,...d.trendWater]
+      .fold(0.0,(a,b)=>a>b?a:b)*1.3;
     return BarChart(BarChartData(
-      alignment: BarChartAlignment.spaceAround, maxY: maxY,
-      barTouchData: BarTouchData(touchTooltipData: BarTouchTooltipData(
-        getTooltipItem: (group, gi, rod, ri) => BarTooltipItem(
-          '${['Disease','Pests','Water'][ri]}: ${rod.toY.toInt()}',
-          const TextStyle(color: Colors.white, fontSize: 11)),
-      )),
-      titlesData: FlTitlesData(
-        leftTitles:   AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles:    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true, reservedSize: 28,
-          getTitlesWidget: (v, m) {
-            final idx = v.toInt();
-            if (idx < 0 || idx >= count) return const SizedBox();
-            return Padding(padding: const EdgeInsets.only(top: 6),
-              child: Text(labels[idx], style: const TextStyle(fontSize: 10, color: Colors.grey)));
-          },
-        )),
-      ),
-      gridData: FlGridData(drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 1)),
-      borderData: FlBorderData(show: false),
-      barGroups: List.generate(count, (i) => BarChartGroupData(x: i, barRods: [
-        BarChartRodData(toY: data.trendDisease[i], color: const Color(0xFF3B6D11), width: 5, borderRadius: BorderRadius.circular(4)),
-        BarChartRodData(toY: data.trendPest[i],    color: const Color(0xFFEF9F27), width: 5, borderRadius: BorderRadius.circular(4)),
-        BarChartRodData(toY: data.trendWater[i],   color: const Color(0xFF378ADD), width: 5, borderRadius: BorderRadius.circular(4)),
+      alignment:BarChartAlignment.spaceAround,
+      maxY:maxY<1?5:maxY,
+      barTouchData:BarTouchData(enabled:false),
+      gridData:FlGridData(drawVerticalLine:false,
+        getDrawingHorizontalLine:(_)=>FlLine(color:_P.divider,strokeWidth:1)),
+      borderData:FlBorderData(show:false),
+      titlesData:FlTitlesData(
+        leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
+        rightTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
+        topTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
+        bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:24,
+          getTitlesWidget:(v,_){
+            final i=v.toInt();
+            if(i<0||i>=labels.length) return const SizedBox();
+            return Padding(padding:const EdgeInsets.only(top:4),
+              child:Text(labels[i],style:const TextStyle(fontSize:9,color:_P.slate)));
+          }))),
+      barGroups:List.generate(labels.length,(i)=>BarChartGroupData(x:i,barRods:[
+        BarChartRodData(toY:d.trendDisease[i],color:_P.leaf,width:4,borderRadius:BorderRadius.circular(3)),
+        BarChartRodData(toY:d.trendPest[i],color:_P.amber,width:4,borderRadius:BorderRadius.circular(3)),
+        BarChartRodData(toY:d.trendWater[i],color:_P.blue,width:4,borderRadius:BorderRadius.circular(3)),
       ])),
     ));
   }
 
-  Widget _buildLineChart(_PeriodData data) {
-    final labels = data.chartLabels;
-    final maxY   = data.trendDisease.reduce((a, b) => a > b ? a : b) * 1.25;
-    final count  = labels.length;
-
-    LineChartBarData series(List<double> vals, Color color) => LineChartBarData(
-      spots: vals.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
-      isCurved: true, color: color, barWidth: 2.5,
-      dotData: const FlDotData(show: true),
-      belowBarData: BarAreaData(show: false),
-    );
-
+  Widget _lineChart(){
+    final d=_stats; final labels=d.chartLabels;
+    final maxY=[...d.trendDisease,...d.trendPest,...d.trendWater]
+      .fold(0.0,(a,b)=>a>b?a:b)*1.3;
+    series(List<double> v,Color c)=>LineChartBarData(
+      spots:v.asMap().entries.map((e)=>FlSpot(e.key.toDouble(),e.value)).toList(),
+      isCurved:true,color:c,barWidth:2,
+      dotData:FlDotData(show:true,getDotPainter:(s,_,__,___)=>
+        FlDotCirclePainter(radius:3,color:c,strokeWidth:0,strokeColor:c)),
+      belowBarData:BarAreaData(show:true,color:c.withValues(alpha:0.06)));
     return LineChart(LineChartData(
-      minY: 0, maxY: maxY,
-      lineTouchData: LineTouchData(touchTooltipData: LineTouchTooltipData(
-        getTooltipItems: (spots) => spots.map((s) => LineTooltipItem(
-          '${['Disease','Pests','Water'][s.barIndex]}: ${s.y.toInt()}',
-          const TextStyle(color: Colors.white, fontSize: 11))).toList(),
-      )),
-      titlesData: FlTitlesData(
-        leftTitles:   AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        rightTitles:  AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        topTitles:    AxisTitles(sideTitles: SideTitles(showTitles: false)),
-        bottomTitles: AxisTitles(sideTitles: SideTitles(
-          showTitles: true, reservedSize: 28,
-          getTitlesWidget: (v, m) {
-            final idx = v.toInt();
-            if (idx < 0 || idx >= count) return const SizedBox();
-            return Padding(padding: const EdgeInsets.only(top: 6),
-              child: Text(labels[idx], style: const TextStyle(fontSize: 10, color: Colors.grey)));
-          },
-        )),
-      ),
-      gridData: FlGridData(drawVerticalLine: false,
-          getDrawingHorizontalLine: (_) => FlLine(color: Colors.grey.shade100, strokeWidth: 1)),
-      borderData: FlBorderData(show: false),
-      lineBarsData: [
-        series(data.trendDisease, const Color(0xFF3B6D11)),
-        series(data.trendPest,    const Color(0xFFEF9F27)),
-        series(data.trendWater,   const Color(0xFF378ADD)),
+      minY:0,maxY:maxY<1?5:maxY,
+      lineTouchData:const LineTouchData(enabled:false),
+      gridData:FlGridData(drawVerticalLine:false,
+        getDrawingHorizontalLine:(_)=>FlLine(color:_P.divider,strokeWidth:1)),
+      borderData:FlBorderData(show:false),
+      titlesData:FlTitlesData(
+        leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
+        rightTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
+        topTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
+        bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:24,
+          getTitlesWidget:(v,_){
+            final i=v.toInt();
+            if(i<0||i>=labels.length) return const SizedBox();
+            return Padding(padding:const EdgeInsets.only(top:4),
+              child:Text(labels[i],style:const TextStyle(fontSize:9,color:_P.slate)));
+          }))),
+      lineBarsData:[
+        series(d.trendDisease,_P.leaf),
+        series(d.trendPest,_P.amber),
+        series(d.trendWater,_P.blue),
       ],
     ));
   }
 
-  Widget _exportButton({required IconData icon, required String label,
-      required Color color, required VoidCallback onTap}) =>
-    Material(color: Colors.white, borderRadius: BorderRadius.circular(14),
-      child: InkWell(borderRadius: BorderRadius.circular(14), onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(border: Border.all(color: color.withValues(alpha: 0.3)),
-              borderRadius: BorderRadius.circular(14)),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Icon(icon, color: color, size: 20),
-            const SizedBox(width: 8),
-            Text(label, style: TextStyle(fontWeight: FontWeight.w600, color: color, fontSize: 14)),
+  // ── Severity donut ────────────────────────────────────────────────────────
+  Widget _buildSeverityCard(AppStrings s) {
+    final sev=_stats.bySeverity;
+    final total=sev.values.fold(0,(a,b)=>a+b);
+    pct(String k)=>total==0?0.0:(sev[k]??0)/total*100;
+    final sevs=[
+      ('Critical',pct('Critical'),const Color(0xFF7A1F1F)),
+      ('High',    pct('High'),    _P.red),
+      ('Medium',  pct('Medium'),  _P.amber),
+      ('Low',     pct('Low'),     _P.leaf),
+    ];
+    return Container(
+      padding:const EdgeInsets.all(20),
+      decoration:_card(),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(s.severityBreakdown,
+          style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink)),
+        const SizedBox(height:16),
+        if(total==0)
+          Center(child:Padding(padding:const EdgeInsets.all(20),
+            child:Text(s.noData,style:const TextStyle(color:_P.slate,fontSize:13))))
+        else
+          Row(children:[
+            SizedBox(width:100,height:100,child:PieChart(PieChartData(
+              sections:sevs.map((s)=>PieChartSectionData(
+                value:s.$2,color:s.$3,title:'',radius:38,
+              )).toList(),
+              sectionsSpace:2,centerSpaceRadius:24,
+              borderData:FlBorderData(show:false),
+            ))),
+            const SizedBox(width:16),
+            Expanded(child:Column(children:sevs.map((item)=>Padding(
+              padding:const EdgeInsets.symmetric(vertical:4),
+              child:Row(children:[
+                Container(width:8,height:8,
+                  decoration:BoxDecoration(color:item.$3,shape:BoxShape.circle)),
+                const SizedBox(width:8),
+                Expanded(child:Text(item.$1,
+                  style:const TextStyle(fontSize:12,color:_P.graphite))),
+                Text('${item.$2.toInt()}%',
+                  style:TextStyle(fontSize:12,fontWeight:FontWeight.w700,color:item.$3)),
+              ]),
+            )).toList())),
           ]),
-        ),
-      ),
-    );
-
-  Widget _dropdown({required String label, required String value,
-      required List<String> items, required ValueChanged<String?> onChanged}) =>
-    DropdownButtonFormField<String>(
-      value: value, isExpanded: true,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFE2E8E2))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFE2E8E2))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppColors.leaf, width: 1.5)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        isDense: true, filled: true, fillColor: Colors.white,
-      ),
-      style: const TextStyle(fontSize: 12, color: Color(0xFF1A1F1A), fontWeight: FontWeight.w500),
-      items: items.map((e) => DropdownMenuItem(value: e,
-          child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-      onChanged: onChanged,
-    );
-
-  Widget _statCard({required String id, required String label, required int value,
-      required IconData icon, required Color color, required String trend,
-      required bool trendUp}) {
-    final isActive = _activeStatFilter == id;
-    return GestureDetector(
-      onTap: () => setState(() => _activeStatFilter = id),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        decoration: BoxDecoration(
-          color: Colors.white, borderRadius: BorderRadius.circular(16),
-          border: isActive ? Border.all(color: AppColors.info, width: 2)
-              : Border.all(color: Colors.grey.shade200),
-        ),
-        padding: const EdgeInsets.all(10),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min, children: [
-          Row(children: [
-            Container(padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8)),
-              child: Icon(icon, size: 14, color: color)),
-            const Spacer(),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              decoration: BoxDecoration(
-                color: trendUp ? const Color(0xFFE8F5E8) : const Color(0xFFFFF0F0),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(trend, style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700,
-                  color: trendUp ? AppColors.leaf : AppColors.critical)),
-            ),
-          ]),
-          const SizedBox(height: 6),
-          Text('$value', style: const TextStyle(fontSize: 22,
-              fontWeight: FontWeight.w800, color: Color(0xFF1A1F1A), height: 1)),
-          const SizedBox(height: 1),
-          Text(label, style: const TextStyle(fontSize: 10,
-              color: Colors.grey, fontWeight: FontWeight.w500)),
-        ]),
-      ),
+      ]),
     );
   }
 
-  Widget _chartToggle() => Row(
-    children: ['Bar', 'Line'].map((type) {
-      final active = _chartType == type;
-      return GestureDetector(
-        onTap: () => setState(() => _chartType = type),
-        child: Container(
-          margin: const EdgeInsets.only(left: 6),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(
-            color: active ? AppColors.info : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: active ? AppColors.info : Colors.grey.shade300),
-          ),
-          child: Text(type, style: TextStyle(fontSize: 12,
-            color: active ? Colors.white : Colors.grey.shade600,
-            fontWeight: active ? FontWeight.bold : FontWeight.normal)),
-        ),
-      );
-    }).toList(),
-  );
-
-  Widget _trendLegend() => Wrap(spacing: 14, children: [
-    ('Disease',      const Color(0xFF3B6D11)),
-    ('Pests',        const Color(0xFFEF9F27)),
-    ('Water Stress', const Color(0xFF378ADD)),
-  ].map((item) => Row(mainAxisSize: MainAxisSize.min, children: [
-    Container(width: 10, height: 10, decoration: BoxDecoration(
-        color: item.$2, borderRadius: BorderRadius.circular(2))),
-    const SizedBox(width: 4),
-    Text(item.$1, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-  ])).toList());
-
-  Widget _categoryTile(String title, int pct, Color color, String delta, bool improved) =>
-    Card(margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(children: [
-          Container(width: 10, height: 10,
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Expanded(child: Text(title, style: const TextStyle(fontSize: 13))),
-          SizedBox(width: 110, child: ClipRRect(borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(value: pct / 100,
-              backgroundColor: Colors.grey.shade100,
-              valueColor: AlwaysStoppedAnimation<Color>(color), minHeight: 6))),
-          const SizedBox(width: 10),
-          SizedBox(width: 32, child: Text('$pct%',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            textAlign: TextAlign.right)),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-            decoration: BoxDecoration(
-              color: delta == '—' ? Colors.grey.shade100
-                  : improved ? Colors.green.shade50 : Colors.red.shade50,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(delta, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold,
-              color: delta == '—' ? Colors.grey
-                  : improved ? const Color(0xFF3B6D11) : const Color(0xFFA32D2D))),
-          ),
-        ]),
-      ),
+  // ── Top greenhouses ───────────────────────────────────────────────────────
+  Widget _buildTopGhCard(AppStrings s) {
+    final top=_stats.topGreenhouses;
+    return Container(
+      padding:const EdgeInsets.all(20),
+      decoration:_card(),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(s.topGhByFindings,
+          style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink)),
+        const SizedBox(height:16),
+        if(top.isEmpty)
+          Center(child:Padding(padding:const EdgeInsets.all(16),
+            child:Text('No data',style:const TextStyle(color:_P.slate,fontSize:13))))
+        else ...top.asMap().entries.map((e){
+          final rank=e.key+1;
+          final gh=e.value;
+          final maxF=top.first.findings.toDouble();
+          final pct=maxF>0?gh.findings/maxF:0.0;
+          final medals=[const Color(0xFFD4AF37),const Color(0xFF9EA09E),const Color(0xFFCD7F32)];
+          return Padding(padding:const EdgeInsets.only(bottom:14),
+            child:Row(children:[
+              Container(width:22,height:22,
+                decoration:BoxDecoration(color:medals[(rank-1).clamp(0,2)].withValues(alpha:0.15),
+                  shape:BoxShape.circle),
+                child:Center(child:Text('$rank',
+                  style:TextStyle(fontSize:10,fontWeight:FontWeight.w800,
+                    color:medals[(rank-1).clamp(0,2)])))),
+              const SizedBox(width:10),
+              Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+                Row(mainAxisAlignment:MainAxisAlignment.spaceBetween,children:[
+                  Text(gh.gh,style:const TextStyle(fontSize:13,fontWeight:FontWeight.w600,color:_P.ink)),
+                  Text('${gh.findings}',
+                    style:const TextStyle(fontSize:13,fontWeight:FontWeight.w700,color:_P.graphite)),
+                ]),
+                const SizedBox(height:5),
+                ClipRRect(borderRadius:BorderRadius.circular(3),
+                  child:LinearProgressIndicator(value:pct,minHeight:4,
+                    backgroundColor:_P.bg,
+                    valueColor:AlwaysStoppedAnimation<Color>(_catColor(gh.topIssue)))),
+                const SizedBox(height:4),
+                Text(gh.topIssue,style:TextStyle(fontSize:10,color:_catColor(gh.topIssue),
+                  fontWeight:FontWeight.w500)),
+              ])),
+            ]));
+        }),
+      ]),
     );
+  }
 
-  Widget _chip(String label, Color textColor, Color bgColor) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-    decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
-    child: Text(label, style: TextStyle(fontSize: 11, color: textColor,
-        fontWeight: FontWeight.w600)),
-  );
+  // ── Category breakdown ────────────────────────────────────────────────────
+  Widget _buildCategoryCard(AppStrings s) {
+    final cats=_stats.byCategory;
+    if(cats.isEmpty) return const SizedBox();
+    final total=cats.values.fold(0,(a,b)=>a+b);
+    final sorted=cats.entries.toList()..sort((a,b)=>b.value.compareTo(a.value));
+    return Container(
+      padding:const EdgeInsets.all(20),
+      decoration:_card(),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Text(s.topProblemCats,
+          style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink)),
+        const SizedBox(height:16),
+        ...sorted.map((e){
+          final pct=total==0?0.0:e.value/total;
+          final color=_catColor(e.key);
+          return Padding(padding:const EdgeInsets.only(bottom:12),
+            child:Row(children:[
+              Container(width:8,height:8,
+                decoration:BoxDecoration(color:color,shape:BoxShape.circle)),
+              const SizedBox(width:10),
+              SizedBox(width:90,child:Text(e.key,
+                style:const TextStyle(fontSize:12,color:_P.graphite),
+                overflow:TextOverflow.ellipsis)),
+              Expanded(child:ClipRRect(borderRadius:BorderRadius.circular(3),
+                child:LinearProgressIndicator(value:pct,minHeight:5,
+                  backgroundColor:_P.bg,
+                  valueColor:AlwaysStoppedAnimation<Color>(color)))),
+              const SizedBox(width:10),
+              SizedBox(width:32,child:Text('${(pct*100).toInt()}%',
+                style:const TextStyle(fontSize:11,fontWeight:FontWeight.w700,
+                  color:_P.graphite),textAlign:TextAlign.right)),
+              const SizedBox(width:6),
+              SizedBox(width:24,child:Text('${e.value}',
+                style:const TextStyle(fontSize:11,color:_P.slate),
+                textAlign:TextAlign.right)),
+            ]));
+        }),
+      ]),
+    );
+  }
+
+  // ── Inspection table ──────────────────────────────────────────────────────
+  Widget _buildInspectionTable(AppStrings s) {
+    final rows=_filtered;
+    final displayRows=_showAllInspections?rows:rows.take(5).toList();
+    return Container(
+      decoration:_card(),
+      child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
+        Padding(padding:const EdgeInsets.fromLTRB(20,20,20,12),
+          child:Row(children:[
+            Expanded(child:Text(s.recentInspections,
+              style:const TextStyle(fontSize:15,fontWeight:FontWeight.w700,color:_P.ink))),
+            if(_activeFilter!='all')
+              GestureDetector(onTap:()=>setState((){_activeFilter='all';_showAllInspections=false;}),
+                child:Container(
+                  padding:const EdgeInsets.symmetric(horizontal:10,vertical:4),
+                  decoration:BoxDecoration(color:_P.mist,borderRadius:BorderRadius.circular(20)),
+                  child:Row(mainAxisSize:MainAxisSize.min,children:[
+                    Text(_activeFilter,style:const TextStyle(fontSize:11,color:_P.forest,
+                      fontWeight:FontWeight.w600)),
+                    const SizedBox(width:4),
+                    const Icon(Icons.close_rounded,size:12,color:_P.forest),
+                  ]))),
+          ])),
+        const Divider(height:1,color:_P.divider),
+        if(rows.isEmpty)
+          Padding(padding:const EdgeInsets.all(32),
+            child:Center(child:Column(children:[
+              const Icon(Icons.search_off_rounded,size:32,color:_P.slate),
+              const SizedBox(height:8),
+              Text(s.noReportsYet,style:const TextStyle(color:_P.slate,fontSize:13)),
+            ])))
+        else ...[
+          _buildTableRows(displayRows, s),
+          if(rows.length>5)
+            InkWell(
+              onTap:()=>setState(()=>_showAllInspections=!_showAllInspections),
+              child:Padding(
+                padding:const EdgeInsets.symmetric(vertical:14),
+                child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                  Text(_showAllInspections?s.showLess:'${s.showAll} (${rows.length})',
+                    style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:_P.forest)),
+                  const SizedBox(width:4),
+                  Icon(_showAllInspections?Icons.keyboard_arrow_up_rounded:Icons.keyboard_arrow_down_rounded,
+                    size:16,color:_P.forest),
+                ]),
+              ),
+            ),
+          if(_showAllInspections && _hasMore && _activeFilter=='all')
+            InkWell(
+              onTap:_loadingMore?null:_loadMore,
+              child:Padding(
+                padding:const EdgeInsets.symmetric(vertical:14),
+                child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
+                  if(_loadingMore)
+                    const SizedBox(width:14,height:14,
+                      child:CircularProgressIndicator(strokeWidth:2,color:_P.forest))
+                  else
+                    Text(s.loadMore,
+                      style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:_P.forest)),
+                ]),
+              ),
+            ),
+        ],
+      ]),
+    );
+  }
+
+
+  Widget _buildTableRows(List<_Inspection> rows, AppStrings s) {
+    final header = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Row(children: [
+        _th(s.colDate, flex: 2), _th(s.colGh, flex: 1), _th(s.colVariety, flex: 2),
+        _th(s.colCategory, flex: 2), _th(s.colSeverity, flex: 2),
+      ]),
+    );
+    final items = <Widget>[header, const Divider(height: 1, color: _P.divider)];
+    for (int i = 0; i < rows.length; i++) {
+      final r = rows[i];
+      final catColor = _catColor(r.category);
+      final sevColor = _sevColor(r.severity);
+      items.add(Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${r.date} · ${r.gh} · ${r.variety}'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          )),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            child: Row(children: [
+              Expanded(flex: 2, child: Text(r.date,
+                style: const TextStyle(fontSize: 12, color: _P.graphite))),
+              Expanded(flex: 1, child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(color: _P.mist, borderRadius: BorderRadius.circular(4)),
+                child: Text(r.gh, style: const TextStyle(fontSize: 11,
+                  fontWeight: FontWeight.w600, color: _P.forest),
+                  overflow: TextOverflow.ellipsis))),
+              Expanded(flex: 2, child: Text(r.variety,
+                style: const TextStyle(fontSize: 12, color: _P.graphite),
+                overflow: TextOverflow.ellipsis)),
+              Expanded(flex: 2, child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: catColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4)),
+                child: Text(r.category, style: TextStyle(fontSize: 10,
+                  fontWeight: FontWeight.w600, color: catColor),
+                  overflow: TextOverflow.ellipsis))),
+              Expanded(flex: 2, child: Row(children: [
+                Container(width: 6, height: 6,
+                  decoration: BoxDecoration(color: sevColor, shape: BoxShape.circle)),
+                const SizedBox(width: 5),
+                Text(r.severity, style: TextStyle(fontSize: 11,
+                  color: sevColor, fontWeight: FontWeight.w600)),
+              ])),
+            ]),
+          ),
+        ),
+      ));
+      if (i < rows.length - 1) {
+        items.add(const Divider(height: 1, color: _P.divider, indent: 20, endIndent: 20));
+      }
+    }
+    return Column(children: items);
+  }
+
+  Widget _th(String label, {int flex = 1}) {
+    return Expanded(flex: flex, child: Text(label,
+      style: const TextStyle(fontSize:10, fontWeight:FontWeight.w700,
+        letterSpacing:0.8, color:_P.slate)));
+  }
+
+  // ── States ────────────────────────────────────────────────────────────────
+  Widget _buildSkeleton()=>Column(children:[
+    const SizedBox(height:20),
+    ...List.generate(3,(_)=>Container(
+      margin:const EdgeInsets.only(bottom:12),height:80,
+      decoration:BoxDecoration(color:_P.surface,borderRadius:BorderRadius.circular(14),
+        border:Border.all(color:_P.border)))),
+  ]);
+
+  Widget _buildError(AppStrings s)=>Center(child:Padding(
+    padding:const EdgeInsets.symmetric(vertical:60),
+    child:Column(mainAxisSize:MainAxisSize.min,children:[
+      Container(width:56,height:56,
+        decoration:const BoxDecoration(color:_P.redBg,shape:BoxShape.circle),
+        child:const Icon(Icons.error_outline_rounded,color:_P.red,size:28)),
+      const SizedBox(height:16),
+      Text(s.errorLoadReports,
+        style:const TextStyle(fontSize:16,fontWeight:FontWeight.w700,color:_P.ink)),
+      const SizedBox(height:6),
+      Text(_error!,style:const TextStyle(fontSize:12,color:_P.slate),
+        textAlign:TextAlign.center,maxLines:3,overflow:TextOverflow.ellipsis),
+      const SizedBox(height:20),
+      ElevatedButton.icon(
+        onPressed:_load,
+        icon:const Icon(Icons.refresh_rounded,size:16),
+        label:const Text('Retry'),
+        style:ElevatedButton.styleFrom(backgroundColor:_P.forest,foregroundColor:Colors.white,
+          shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10)),elevation:0)),
+    ])));
+
+  // ── Export ────────────────────────────────────────────────────────────────
+  void _showExport(String type, AppStrings s){
+    showDialog(context:context,builder:(ctx)=>AlertDialog(
+      shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(16)),
+      title:Text(type=='pdf'?s.exportPdf:s.exportExcel,
+        style:const TextStyle(fontFamily:'Georgia',fontSize:18)),
+      content:Text(type=='pdf'?s.exportPdfDesc:s.exportExcelDesc),
+      actions:[
+        TextButton(onPressed:()=>Navigator.pop(ctx),child:Text(s.cancel)),
+        ElevatedButton(
+          onPressed:(){Navigator.pop(ctx);
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content:Text('${type=='pdf'?s.exportPdf:s.exportExcel} — coming soon'),
+              behavior:SnackBarBehavior.floating,
+              shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10))));},
+          style:ElevatedButton.styleFrom(backgroundColor:_P.forest,foregroundColor:Colors.white,
+            elevation:0,shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(8))),
+          child:Text(s.download)),
+      ]));
+  }
+
+  BoxDecoration _card()=>BoxDecoration(
+    color:_P.surface,borderRadius:BorderRadius.circular(14),
+    border:Border.all(color:_P.border),
+    boxShadow:[BoxShadow(color:Colors.black.withValues(alpha:0.03),
+      blurRadius:8,offset:const Offset(0,2))]);
+}
+
+class _KpiData {
+  final String id,label; final int value; final IconData icon; final Color color,bg;
+  const _KpiData({required this.id,required this.label,required this.value,
+    required this.icon,required this.color,required this.bg});
 }

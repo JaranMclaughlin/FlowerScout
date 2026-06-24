@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/providers/farm_providers.dart';
+import '../../../shared/providers/locale_provider.dart';
+import '../../../shared/l10n/app_strings.dart';
 import '../../../shared/providers/farm_repository.dart';
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -65,7 +67,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   // Team invite
   final _inviteCtrl = TextEditingController();
-  String _inviteRole = 'Scout';
+  String _inviteRole = 'scout';
 
   @override
   void initState() {
@@ -93,6 +95,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final profile = ref.read(profileProvider).value;
     return profile?.role == 'manager' || profile?.role == 'system_admin';
   }
+
+  AppStrings get s => AppStrings.of(ref.watch(localeProvider));
 
   @override
   Widget build(BuildContext context) {
@@ -131,9 +135,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 28, 20, 16),
-          child: Text('Settings', style: TextStyle(fontFamily: 'Georgia',
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
+          child: Text(s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
               fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
         ),
         const Divider(height: 0.5, thickness: 0.5, color: _C.divider),
@@ -163,10 +167,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: Row(children: [
           Icon(meta.icon, size: 18, color: active ? _C.leaf : _C.slate),
           const SizedBox(width: 10),
-          Text(meta.label, style: _T.body.copyWith(
+          Expanded(child: Text(meta.label, style: _T.body.copyWith(
             color: active ? _C.forest : _C.slate,
             fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-          )),
+          ), overflow: TextOverflow.ellipsis)),
         ]),
       ),
     );
@@ -181,9 +185,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildTopBar() => Container(
     color: _C.paper,
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Padding(
-        padding: EdgeInsets.fromLTRB(20, 20, 20, 12),
-        child: Text('Settings', style: TextStyle(fontFamily: 'Georgia',
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        child: Text(s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
             fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
       ),
       SingleChildScrollView(
@@ -257,8 +261,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final farmsAsync = ref.watch(farmsProvider);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionHeader('Farm & greenhouse config',
-          'Manage your farms and growing locations.',
+      _sectionHeader(s.farmGhConfigTitle,
+          s.farmGhConfigDesc,
           Icons.agriculture_rounded, _C.leaf),
       const SizedBox(height: 24),
 
@@ -535,7 +539,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               const SizedBox(width: 14),
               SizedBox(width: 160, child: _labeledDropdown(
                 label: 'ROLE', value: _inviteRole,
-                items: const ['Scout', 'Viewer', 'Manager'],
+                items: ['scout', 'viewer', 'manager'],
                 onChanged: (v) => setState(() => _inviteRole = v!),
               )),
             ])
@@ -588,37 +592,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildNotificationsTab() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionHeader('Notifications & alerts',
-          'Control when and how FlowerScout notifies you.',
+      _sectionHeader(s.notificationsAlerts,
+          s.controlNotif,
           Icons.notifications_rounded, _C.canopy),
       const SizedBox(height: 24),
-      _card(label: 'INSPECTION ALERTS', child: Column(children: [
-        _toggleRow('Overdue inspection reminder',
-            'Notify when a greenhouse passes its inspection date',
+      _card(label: s.inspectionAlerts, child: Column(children: [
+        _toggleRow(s.overdueReminder,
+            s.overdueDesc,
             _notifOverdue, (v) => setState(() => _notifOverdue = v)),
         _divider(),
-        _toggleRow('Critical pest / disease alert',
-            'Immediate push when health score drops below threshold',
+        _toggleRow(s.criticalAlert,
+            s.criticalAlertDesc,
             _notifCritical, (v) => setState(() => _notifCritical = v)),
         _divider(),
-        _toggleRow('Weekly summary report',
-            'Every Monday 7 AM — farm health digest',
+        _toggleRow(s.weeklySummary,
+            s.weeklyDescFull,
             _notifWeekly, (v) => setState(() => _notifWeekly = v)),
       ])),
       const SizedBox(height: 12),
-      _card(label: 'DELIVERY CHANNELS', child: Column(children: [
-        _toggleRow('Push notifications', 'Mobile and desktop',
+      _card(label: s.deliveryChannels, child: Column(children: [
+        _toggleRow(s.pushNotifications, s.pushDesc,
             _notifPush, (v) => setState(() => _notifPush = v)),
         _divider(),
         _toggleRow('Email', _emailCtrl.text.isEmpty
             ? 'Not set' : _emailCtrl.text,
             _notifEmail, (v) => setState(() => _notifEmail = v)),
         _divider(),
-        _toggleRow('SMS', 'Add phone number in Profile',
+        _toggleRow('SMS', s.addPhoneForSms,
             _notifSms, (v) => setState(() => _notifSms = v)),
       ])),
       const SizedBox(height: 24),
-      _saveButton('Save notification settings'),
+      _saveButton(s.saveNotifSettings),
     ],
   );
 
@@ -629,36 +633,76 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       _sectionHeader('App preferences',
-          'Personalise how FlowerScout looks and behaves.',
+          s.personaliseDesc,
           Icons.tune_rounded, _C.canopy),
       const SizedBox(height: 24),
+      Consumer(builder: (context, ref, _) {
+        final lang = ref.watch(localeProvider);
+        final s    = ref.watch(stringsProvider);
+        return _card(label: s.language, child: Row(children: [
+          Expanded(child: GestureDetector(
+            onTap: () => ref.read(localeProvider.notifier).setLanguage('en'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: lang == 'en' ? _C.leaf : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: lang == 'en' ? _C.leaf : _C.divider),
+              ),
+              child: Text('🇬🇧  ', style: TextStyle(fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: lang == 'en' ? Colors.white : _C.slate)),
+            ),
+          )),
+          const SizedBox(width: 10),
+          Expanded(child: GestureDetector(
+            onTap: () => ref.read(localeProvider.notifier).setLanguage('sw'),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: lang == 'sw' ? _C.leaf : Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: lang == 'sw' ? _C.leaf : _C.divider),
+              ),
+              child: Text('🇰🇪  ', style: TextStyle(fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: lang == 'sw' ? Colors.white : _C.slate)),
+            ),
+          )),
+        ]));
+      }),
+      const SizedBox(height: 12),
       _card(label: 'APPEARANCE', child: Column(children: [
         _labeledDropdown(label: 'THEME', value: _theme,
-            items: const ['System default', 'Light', 'Dark'],
+            items: ['System default', 'Light', 'Dark'],
             onChanged: (v) => setState(() => _theme = v!)),
         const SizedBox(height: 14),
         _labeledDropdown(label: 'DATE FORMAT', value: _dateFormat,
-            items: const ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD (ISO)'],
+            items: ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD (ISO)'],
             onChanged: (v) => setState(() => _dateFormat = v!)),
       ])),
       const SizedBox(height: 12),
       _card(label: 'MAP DEFAULTS', child: Column(children: [
         _labeledDropdown(label: 'DEFAULT VIEW', value: _mapDefault,
-            items: const ['Satellite', 'Terrain', 'Street'],
+            items: ['Satellite', 'Terrain', 'Street'],
             onChanged: (v) => setState(() => _mapDefault = v!)),
         _divider(),
-        _toggleRow('Show heatmap on load',
-            'Auto-display scouting heatmap when opening Maps',
+        _toggleRow(s.showHeatmap,
+            s.showHeatmapDesc,
             _heatmap, (v) => setState(() => _heatmap = v)),
       ])),
       const SizedBox(height: 12),
       _card(label: 'ABOUT', child: Column(children: [
-        _settingRow(label: 'FlowerScout', subtitle: 'Version 1.0.0 · Flutter',
+        _settingRow(label: 'FlowerScout', subtitle: s.versionLabel,
             trailing: _statusBadge('Latest')),
         _divider(),
         _settingRow(
           label: 'Sign out',
-          subtitle: 'Log out of FlowerScout',
+          subtitle: s.logOut,
           labelColor: const Color(0xFFD32F2F),
           trailing: const Icon(Icons.logout_rounded,
               color: Color(0xFFD32F2F), size: 18),
@@ -908,19 +952,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   String _roleLabel(String role) => switch (role) {
-    'system_admin' => 'System Admin',
-    'manager'      => 'Manager',
-    'scout'        => 'Scout',
-    'viewer'       => 'Viewer',
+    'system_admin' => s.systemAdmin,
+    'manager'      => s.roleManager,
+    'scout'        => s.roleScout,
+    'viewer'       => s.roleViewer,
     _              => role,
   };
 
   ({String label, IconData icon}) _tabMeta(_Tab tab) => switch (tab) {
-    _Tab.farms         => (label: 'Farm config',   icon: Icons.agriculture_rounded),
-    _Tab.profile       => (label: 'Profile',       icon: Icons.person_rounded),
-    _Tab.team          => (label: 'Team',          icon: Icons.group_rounded),
-    _Tab.notifications => (label: 'Notifications', icon: Icons.notifications_rounded),
-    _Tab.preferences   => (label: 'Preferences',  icon: Icons.tune_rounded),
+    _Tab.farms         => (label: s.tabFarms,   icon: Icons.agriculture_rounded),
+    _Tab.profile       => (label: s.tabProfile,       icon: Icons.person_rounded),
+    _Tab.team          => (label: s.tabTeam,          icon: Icons.group_rounded),
+    _Tab.notifications => (label: s.tabNotifications, icon: Icons.notifications_rounded),
+    _Tab.preferences   => (label: s.tabPreferences,  icon: Icons.tune_rounded),
   };
 }
 

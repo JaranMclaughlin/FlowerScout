@@ -3,13 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
-import '../../features/scouting/presentation/scouting_screen.dart' hide AppColors;
+import '../../features/scouting/presentation/scouting_screen.dart';
 import '../../features/maps/presentation/maps_screen.dart';
 import '../../features/reports/presentation/reports_screen.dart';
 import '../../features/settings/presentation/settings_screen.dart';
 import '../theme/app_colors.dart' show AppColors;
 import '../../core/theme/app_theme.dart' show AppSizes;
 import '../providers/shell_tab_provider.dart';
+import '../providers/locale_provider.dart';
+import '../l10n/app_strings.dart';
+import '../../core/session/user_session.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -26,30 +29,50 @@ class _AppShellState extends ConsumerState<AppShell> {
     SettingsScreen(),
   ];
 
-  static const _items = [
-    _NavItem(Icons.dashboard_rounded,   Icons.dashboard_outlined,   'Dashboard'),
-    _NavItem(Icons.grass_rounded,       Icons.grass_outlined,       'Scouting'),
-    _NavItem(Icons.map_rounded,         Icons.map_outlined,         'Maps'),
-    _NavItem(Icons.bar_chart_rounded,   Icons.bar_chart_outlined,   'Reports'),
-    _NavItem(Icons.settings_rounded,    Icons.settings_outlined,    'Settings'),
-  ];
+  // Tabs visible to scouts: Dashboard, Scouting, Settings only
+  // Tabs visible to managers/admins: all five
+  List<_NavItem> _navItems(AppStrings s, bool isScout) {
+    final all = [
+      _NavItem(Icons.dashboard_rounded,  Icons.dashboard_outlined,  s.navDashboard, 0),
+      _NavItem(Icons.grass_rounded,      Icons.grass_outlined,      s.navScouting,  1),
+      _NavItem(Icons.map_rounded,        Icons.map_outlined,        s.navMaps,      2),
+      _NavItem(Icons.bar_chart_rounded,  Icons.bar_chart_outlined,  s.navReports,   3),
+      _NavItem(Icons.settings_rounded,   Icons.settings_outlined,   s.navSettings,  4),
+    ];
+    if (isScout) return [all[0], all[1], all[4]]; // Dashboard, Scouting, Settings
+    return all;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final s = ref.watch(stringsProvider);
+    final profile = UserSession.currentProfile;
+    final isScout = profile == UserProfile.scout;
+    final items = _navItems(s, isScout);
+
+    // Clamp tab index so scouts don't land on a hidden tab
+    final rawIndex = ref.watch(selectedTabProvider);
+    final validPageIndices = items.map((i) => i.pageIndex).toList();
+    final currentPageIndex = validPageIndices.contains(rawIndex)
+        ? rawIndex
+        : items.first.pageIndex;
+
     final isTablet = MediaQuery.of(context).size.width >= 600;
-    return isTablet ? _tabletLayout() : _phoneLayout();
+    return isTablet
+        ? _tabletLayout(s, items, currentPageIndex)
+        : _phoneLayout(s, items, currentPageIndex);
   }
 
-  int get _index => ref.watch(selectedTabProvider);
-  void _setIndex(int i) => ref.read(selectedTabProvider.notifier).set(i);
+  void _setIndex(int pageIndex) =>
+      ref.read(selectedTabProvider.notifier).set(pageIndex);
 
-  // ── Phone — bottom nav, slightly smaller than Material default ─────────────
-  Widget _phoneLayout() {
+  // ── Phone ─────────────────────────────────────────────────────────────────
+  Widget _phoneLayout(AppStrings s, List<_NavItem> items, int currentPageIndex) {
     return Scaffold(
-      body: _pages[_index],
+      body: _pages[currentPageIndex],
       bottomNavigationBar: NavigationBarTheme(
         data: NavigationBarThemeData(
-          height: 58, // was default ~80
+          height: 58,
           labelTextStyle: WidgetStateProperty.resolveWith((states) {
             final selected = states.contains(WidgetState.selected);
             return TextStyle(
@@ -61,18 +84,18 @@ class _AppShellState extends ConsumerState<AppShell> {
           iconTheme: WidgetStateProperty.resolveWith((states) {
             final selected = states.contains(WidgetState.selected);
             return IconThemeData(
-              size: 20, // was default 24
+              size: 20,
               color: selected ? AppColors.leaf : AppColors.muted,
             );
           }),
         ),
         child: NavigationBar(
-          selectedIndex: _index,
-          onDestinationSelected: _setIndex,
+          selectedIndex: items.indexWhere((i) => i.pageIndex == currentPageIndex),
+          onDestinationSelected: (i) => _setIndex(items[i].pageIndex),
           backgroundColor: Colors.white,
           indicatorColor: AppColors.leaf.withValues(alpha: 0.15),
           labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-          destinations: _items.map((item) => NavigationDestination(
+          destinations: items.map((item) => NavigationDestination(
             icon: Icon(item.iconOutlined),
             selectedIcon: Icon(item.icon),
             label: item.label,
@@ -82,8 +105,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
-  // ── Tablet/Desktop — sidebar, narrower than before ──────────────────────────
-  Widget _tabletLayout() {
+  // ── Tablet/Desktop ────────────────────────────────────────────────────────
+  Widget _tabletLayout(AppStrings s, List<_NavItem> items, int currentPageIndex) {
     final isExtended = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
       body: Row(
@@ -93,17 +116,16 @@ class _AppShellState extends ConsumerState<AppShell> {
               selectedIconTheme: IconThemeData(color: AppColors.leaf, size: 20),
               unselectedIconTheme: IconThemeData(color: AppColors.muted, size: 20),
               selectedLabelTextStyle: TextStyle(
-                color: AppColors.leaf, fontWeight: FontWeight.w600, fontSize: 12,
-              ),
+                  color: AppColors.leaf, fontWeight: FontWeight.w600, fontSize: 12),
               unselectedLabelTextStyle: TextStyle(color: AppColors.muted, fontSize: 12),
             ),
             child: NavigationRail(
-              selectedIndex: _index,
-              onDestinationSelected: _setIndex,
+              selectedIndex: items.indexWhere((i) => i.pageIndex == currentPageIndex),
+              onDestinationSelected: (i) => _setIndex(items[i].pageIndex),
               backgroundColor: Colors.white,
               extended: isExtended,
-              minWidth: 64,    // was default 72
-              minExtendedWidth: 180, // was default 256
+              minWidth: 64,
+              minExtendedWidth: 180,
               indicatorColor: AppColors.leaf.withValues(alpha: 0.15),
               groupAlignment: -1.0,
               leading: Padding(
@@ -124,11 +146,11 @@ class _AppShellState extends ConsumerState<AppShell> {
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: AppSizes.space2xl),
-                    child: _signOutButton(isExtended),
+                    child: _signOutButton(s, isExtended),
                   ),
                 ),
               ),
-              destinations: _items.map((item) => NavigationRailDestination(
+              destinations: items.map((item) => NavigationRailDestination(
                 icon: Icon(item.iconOutlined),
                 selectedIcon: Icon(item.icon),
                 label: Text(item.label),
@@ -136,15 +158,15 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
           ),
           const VerticalDivider(thickness: 0.5, width: 0.5),
-          Expanded(child: _pages[_index]),
+          Expanded(child: _pages[currentPageIndex]),
         ],
       ),
     );
   }
 
-  Widget _signOutButton(bool extended) {
+  Widget _signOutButton(AppStrings s, bool extended) {
     return Tooltip(
-      message: 'Sign out',
+      message: s.signOut,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         onTap: () async {
@@ -153,18 +175,17 @@ class _AppShellState extends ConsumerState<AppShell> {
             builder: (_) => AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
-              title: const Text('Sign out?',
-                  style: TextStyle(fontFamily: 'Georgia', fontSize: 18)),
-              content: const Text(
-                  'You will need to log in again to access FlowerScout.'),
+              title: Text(s.signOutConfirm,
+                  style: const TextStyle(fontFamily: 'Georgia', fontSize: 18)),
+              content: Text(s.signOutMsg),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancel')),
+                    child: Text(s.cancel)),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Sign out',
-                      style: TextStyle(color: AppColors.critical)),
+                  child: Text(s.signOut,
+                      style: const TextStyle(color: AppColors.critical)),
                 ),
               ],
             ),
@@ -187,11 +208,11 @@ class _AppShellState extends ConsumerState<AppShell> {
             borderRadius: BorderRadius.circular(AppSizes.radiusMd),
           ),
           child: extended
-              ? const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.logout_rounded, color: AppColors.critical, size: 18),
-                  SizedBox(width: 6),
-                  Text('Sign out',
-                      style: TextStyle(
+              ? Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.logout_rounded, color: AppColors.critical, size: 18),
+                  const SizedBox(width: 6),
+                  Text(s.signOut,
+                      style: const TextStyle(
                           color: AppColors.critical,
                           fontSize: 12,
                           fontWeight: FontWeight.w600)),
@@ -207,5 +228,6 @@ class _NavItem {
   final IconData icon;
   final IconData iconOutlined;
   final String label;
-  const _NavItem(this.icon, this.iconOutlined, this.label);
+  final int pageIndex;
+  const _NavItem(this.icon, this.iconOutlined, this.label, this.pageIndex);
 }
