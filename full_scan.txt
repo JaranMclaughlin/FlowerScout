@@ -1,0 +1,28 @@
+analytics_screen.dart:354: No data
+analytics_screen.dart:385: No data
+analytics_screen.dart:415: No data
+farm_repository.dart:244: Not authenticated
+location_permission_screen.dart:141: Allow location access
+location_permission_screen.dart:175: Records your walking trail across the farm
+location_permission_screen.dart:187: Powers distance and coverage analytics
+location_permission_screen.dart:213: Allow while using app
+location_permission_screen.dart:237: Not now
+location_permission_screen.dart:64: Location blocked
+location_permission_screen.dart:79: Continue anyway
+location_permission_screen.dart:88: Open settings
+main.dart:37: Flower Scout
+reports_screen.dart:709: No data
+settings_screen.dart:62: System default
+topbar_widgets.dart:355: Just now
+topbar_widgets.dart:38: Partly Cloudy
+topbar_widgets.dart:473: Feels like
+topbar_widgets.dart:474: Feels like
+topbar_widgets.dart:545: High Severity Alert
+topbar_widgets.dart:546: Potential pest outbreak detected
+topbar_widgets.dart:553: Inspection Due
+topbar_widgets.dart:561: Report Ready
+topbar_widgets.dart:562: Weekly scouting summary is ready to view
+topbar_widgets.dart:569: Irrigation Alert
+topbar_widgets.dart:731: Just now
+topbar_widgets.dart:793: Mark all read
+topbar_widgets.dart:865: No new notifications

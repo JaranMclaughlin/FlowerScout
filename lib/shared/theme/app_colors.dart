@@ -31,7 +31,8 @@ class AppColors {
   static const Color muted    = Color(0xFF888780);
 
   // Severity (high added — critical/warning/success already existed above)
-  static const Color high = Color(0xFFEF6C00);
+  static const Color high      = Color(0xFFEF6C00);
+  static const Color warningBg  = Color(0xFFFFF8ED);
   static const Color info = Color(0xFF185FA5);
 
   static Color severityColor(String severity) {
@@ -49,6 +50,7 @@ class AppColors {
 
   // Category accents
   static const Color disease       = Color(0xFFD32F2F);
+  static const Color diseaseBg     = Color(0xFFFDF0F0);
   static const Color pest          = Color(0xFFE65100);
   static const Color water         = Color(0xFF0277BD);
   static const Color nutrition     = Color(0xFF388E3C);

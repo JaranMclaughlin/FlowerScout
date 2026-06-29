@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,36 +11,18 @@ import '../../../shared/providers/farm_repository.dart';
 import '../../../shared/providers/locale_provider.dart';
 import '../../../shared/l10n/app_strings.dart';
 import '../../../shared/trail/trail_tracking_controller.dart';
+import '../../../core/offline/offline_sync_service.dart';
+import '../../../shared/theme/app_colors.dart';
 
 class FindingData {
   String category;
   String severity;
   String issue;
+  List<XFile>  photoFiles = [];   // local files (pre-upload)
+  List<String> photoUrls  = [];   // Supabase Storage URLs (post-upload)
   FindingData({this.category = 'Disease', this.severity = 'Medium', this.issue = ''});
 }
 
-class _C {
-  static const forest    = Color(0xFF1B4332);
-  static const canopy    = Color(0xFF2D6A4F);
-  static const leaf      = Color(0xFF40916C);
-  static const mint      = Color(0xFF74C69D);
-  static const mist      = Color(0xFFD8F3DC);
-  static const cream     = Color(0xFFF8FAF8);
-  static const paper     = Color(0xFFFFFFFF);
-  static const ink       = Color(0xFF0D1B0F);
-  static const graphite  = Color(0xFF3D4F42);
-  static const slate     = Color(0xFF6B7F6E);
-  static const fog       = Color(0xFFEAEFEA);
-  static const divider   = Color(0xFFDDE5DD);
-  static const disease   = Color(0xFFD32F2F);
-  static const pest      = Color(0xFFE65100);
-  static const water     = Color(0xFF0277BD);
-  static const nutrition = Color(0xFF388E3C);
-  static const irrigation= Color(0xFF00838F);
-  static const other     = Color(0xFF455A64);
-  static const high      = Color(0xFFEF6C00);
-  static const critical  = Color(0xFFD32F2F);
-}
 
 class ScoutingScreen extends ConsumerStatefulWidget {
   const ScoutingScreen({super.key});
@@ -63,6 +48,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
   // Duplicate submit guard
   bool _submitting = false;
   bool _submitted  = false;
+  int  _queueCount = 0; // offline queue badge
 
   late AnimationController _headerAnim;
   late Animation<double> _headerFade;
@@ -85,6 +71,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
   @override
   void initState() {
     super.initState();
+    _refreshQueueCount();
     _headerAnim = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
     _headerFade = CurvedAnimation(parent: _headerAnim, curve: Curves.easeOut);
     _headerAnim.forward();
@@ -165,6 +152,21 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
     );
   }
 
+
+  // ── Queue badge ──────────────────────────────────────────────────────────────
+  Future<void> _refreshQueueCount() async {
+    final count = await OfflineSyncService.queueLength();
+    if (mounted) setState(() => _queueCount = count);
+  }
+
+  // ── Offline queue (hardened) ─────────────────────────────────────────────
+
+
+
+
+
+  /// Drains the offline queue - call this on app resume / reconnect
+
   Future<void> _submitReport() async {
     // Duplicate submit guard
     if (_submitting || _submitted) return;
@@ -173,12 +175,12 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
 
     if (selectedFarm == null || selectedGreenhouse == null || selectedVariety == null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(s.pleaseSelectAll), backgroundColor: _C.high));
+        content: Text(s.pleaseSelectAll), backgroundColor: AppColors.high));
       return;
     }
     if (!findings.any((f) => f.issue.trim().isNotEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(s.pleaseAddFinding), backgroundColor: _C.high));
+        content: Text(s.pleaseAddFinding), backgroundColor: AppColors.high));
       return;
     }
 
@@ -205,27 +207,50 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
             'latitude': _gpsPosition?.latitude,
             'longitude': _gpsPosition?.longitude,
             'status': 'submitted',
-            if (trailId != null) 'trail_id': trailId,
+            // ignore: use_null_aware_elements
+            // ignore: use_null_aware_elements
+          if (trailId != null) 'trail_id': trailId,
           })
           .select('id')
           .single();
 
       for (final finding in findings.where((f) => f.issue.trim().isNotEmpty)) {
+        // Upload any photos for this finding
+        final List<String> uploadedUrls = [];
+        for (final photo in finding.photoFiles) {
+          try {
+            final bytes    = await photo.readAsBytes();
+            final ext      = photo.name.split('.').last.toLowerCase();
+            final fileName = '${const Uuid().v4()}.$ext';
+            final path     = 'findings/${reportId['id']}/$fileName';
+            await Supabase.instance.client.storage
+                .from('finding-photos')
+                .uploadBinary(path, bytes,
+                    fileOptions: FileOptions(contentType: 'image/$ext', upsert: false));
+            final url = Supabase.instance.client.storage
+                .from('finding-photos')
+                .getPublicUrl(path);
+            uploadedUrls.add(url);
+          } catch (photoErr) {
+            debugPrint('[photos] upload failed: \$photoErr');
+          }
+        }
         await Supabase.instance.client.from('inspection_findings').insert({
           'report_id': reportId['id'],
           'category': finding.category,
           'severity': finding.severity,
           'issue': finding.issue.trim(),
+          if (uploadedUrls.isNotEmpty) 'photo_urls': uploadedUrls,
         });
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          backgroundColor: _C.forest,
+          backgroundColor: AppColors.forest,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           content: Row(children: [
-            const Icon(Icons.check_circle_rounded, color: _C.mint),
+            const Icon(Icons.check_circle_rounded, color: AppColors.mint),
             const SizedBox(width: 10),
             Text(s.reportSubmitted, style: const TextStyle(color: Colors.white)),
           ]),
@@ -248,12 +273,67 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
         _headerAnim.forward();
       }
     } catch (e) {
-      if (mounted) {
-        setState(() { _submitting = false; _submitted = false; });
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('${ref.read(stringsProvider).failedToSubmit}$e'),
-          backgroundColor: _C.critical,
-        ));
+      // Network failure - save to offline queue
+      try {
+        final user = Supabase.instance.client.auth.currentUser;
+        await OfflineSyncService.saveToQueue({
+          'scout_id': user?.id,
+          'greenhouse_id': selectedGreenhouse!.id,
+          'variety_name': selectedVariety,
+          'started_at': _sessionStart?.toIso8601String(),
+          'submitted_at': DateTime.now().toIso8601String(),
+          'duration_seconds': _elapsedSeconds,
+          'latitude': _gpsPosition?.latitude,
+          'longitude': _gpsPosition?.longitude,
+          'status': 'queued',
+          // ignore: use_null_aware_elements
+          if (trailId != null) 'trail_id': trailId,
+        }, findings.where((f) => f.issue.trim().isNotEmpty).map((f) => {
+          'category': f.category,
+          'severity': f.severity,
+          'issue': f.issue.trim(),
+          // photos are local files - paths only, re-upload on drain
+          'photo_paths': f.photoFiles.map((x) => x.path).toList(),
+        }).toList());
+
+        if (mounted) {
+          setState(() {
+            _scoutingStarted  = false;
+            _sessionStart     = null;
+            _elapsedSeconds   = 0;
+            _gpsPosition      = null;
+            _locationDenied   = false;
+            selectedFarm      = null;
+            selectedGreenhouse = null;
+            selectedVariety   = null;
+            findings.clear();
+            findings.add(FindingData());
+            _submitting = false;
+            _submitted  = false;
+          });
+          _headerAnim.reset();
+          _headerAnim.forward();
+          _refreshQueueCount(); // update badge
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: const Color(0xFFBA7517),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Row(children: [
+              const Icon(Icons.cloud_off_rounded, color: Colors.white),
+              const SizedBox(width: 10),
+              Expanded(child: Text('${ref.read(stringsProvider).offlineNoConn} — ${ref.read(stringsProvider).offlineQueuedSingle}',
+                  style: const TextStyle(color: Colors.white))),
+            ]),
+          ));
+        }
+      } catch (queueError) {
+        if (mounted) {
+          setState(() { _submitting = false; _submitted = false; });
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('${ref.read(stringsProvider).failedToSubmit}$e'),
+            backgroundColor: AppColors.critical,
+          ));
+        }
       }
     }
   }
@@ -272,18 +352,18 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
     final s = ref.watch(stringsProvider);
 
     return Scaffold(
-      backgroundColor: _C.cream,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: farmsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator(color: _C.leaf, strokeWidth: 2)),
+          loading: () => const Center(child: CircularProgressIndicator(color: AppColors.leaf, strokeWidth: 2)),
           error: (e, _) => Center(child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              const Icon(Icons.error_outline_rounded, size: 40, color: _C.critical),
+              const Icon(Icons.error_outline_rounded, size: 40, color: AppColors.critical),
               const SizedBox(height: 16),
               Text(s.couldNotLoadFarm, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              Text(e.toString(), style: const TextStyle(fontSize: 12, color: _C.slate), textAlign: TextAlign.center),
+              Text(e.toString(), style: const TextStyle(fontSize: 12, color: AppColors.slate), textAlign: TextAlign.center),
             ]),
           )),
           data: (farms) => LayoutBuilder(
@@ -354,20 +434,20 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
       width: double.infinity,
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: _C.paper, borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _C.divider),
+        color: AppColors.surface, borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.divider),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 12, offset: const Offset(0, 4))],
       ),
       child: Column(children: [
         Container(width: 72, height: 72,
-          decoration: const BoxDecoration(color: _C.mist, shape: BoxShape.circle),
-          child: const Icon(Icons.grass_rounded, color: _C.forest, size: 36)),
+          decoration: const BoxDecoration(color: AppColors.mist, shape: BoxShape.circle),
+          child: const Icon(Icons.grass_rounded, color: AppColors.forest, size: 36)),
         const SizedBox(height: 20),
-        Text(s.readyToScout, style: const TextStyle(fontFamily: 'Georgia', fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
+        Text(s.readyToScout, style: const TextStyle(fontFamily: 'Georgia', fontSize: 22, fontWeight: FontWeight.w700, color: AppColors.ink)),
         const SizedBox(height: 8),
-        Text(dateStr, style: const TextStyle(fontSize: 14, color: _C.slate)),
+        Text(dateStr, style: const TextStyle(fontSize: 14, color: AppColors.slate)),
         const SizedBox(height: 8),
-        Text(s.startScoutingDesc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: _C.graphite, height: 1.5)),
+        Text(s.startScoutingDesc, textAlign: TextAlign.center, style: const TextStyle(fontSize: 13, color: AppColors.graphite, height: 1.5)),
         const SizedBox(height: 28),
         SizedBox(
           width: double.infinity, height: 52,
@@ -376,7 +456,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
             label: Text(s.startScouting, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
             onPressed: _requestLocationAndStart,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _C.forest, foregroundColor: Colors.white, elevation: 0,
+              backgroundColor: AppColors.forest, foregroundColor: Colors.white, elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             ),
           ),
@@ -393,9 +473,9 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_C.forest, _C.canopy, _C.leaf]),
+        gradient: const LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [AppColors.forest, AppColors.canopy, AppColors.leaf]),
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: _C.canopy.withValues(alpha: 0.30), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [BoxShadow(color: AppColors.canopy.withValues(alpha: 0.30), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Stack(children: [
         Positioned(right: -30, top: -30,
@@ -425,7 +505,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
                   const SizedBox(height: 4),
                   Text(_timerLabel, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700, fontFamily: 'monospace')),
                   if (_gpsPosition != null)
-                    const Padding(padding: EdgeInsets.only(top: 4), child: Icon(Icons.gps_fixed_rounded, color: _C.mint, size: 14)),
+                    const Padding(padding: EdgeInsets.only(top: 4), child: Icon(Icons.gps_fixed_rounded, color: AppColors.mint, size: 14)),
                   if (_locationDenied)
                     const Padding(padding: EdgeInsets.only(top: 4), child: Icon(Icons.gps_off_rounded, color: Colors.white38, size: 14)),
                 ]),
@@ -476,16 +556,16 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
   }) {
     return SizedBox(width: 200, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(padding: const EdgeInsets.only(left: 2, bottom: 6),
-        child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: _C.slate))),
+        child: Text(label, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: AppColors.slate))),
       Container(
-        decoration: BoxDecoration(color: enabled ? _C.paper : _C.fog, borderRadius: BorderRadius.circular(12), border: Border.all(color: _C.divider)),
+        decoration: BoxDecoration(color: enabled ? AppColors.surface : AppColors.surfaceAlt, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.divider)),
         child: DropdownButtonHideUnderline(child: DropdownButton<T>(
           value: value,
-          hint: Text(hint, style: const TextStyle(fontSize: 14, color: _C.slate)),
+          hint: Text(hint, style: const TextStyle(fontSize: 14, color: AppColors.slate)),
           isExpanded: true,
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
           borderRadius: BorderRadius.circular(12),
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _C.graphite),
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.graphite),
           items: items.map((i) => DropdownMenuItem(value: i, child: Text(display(i), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)))).toList(),
           onChanged: enabled ? onChanged : null,
         )),
@@ -496,16 +576,16 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
   Widget _buildProgressCard(AppStrings s) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: _C.paper, borderRadius: BorderRadius.circular(16), border: Border.all(color: _C.divider)),
+      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.divider)),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(s.inspectionProgress, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: _C.ink)),
-          Text('${(progress * 100).toInt()}%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: _C.leaf)),
+          Text(s.inspectionProgress, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.ink)),
+          Text('${(progress * 100).toInt()}%', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.leaf)),
         ]),
         const SizedBox(height: 12),
         ClipRRect(borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(value: progress, backgroundColor: _C.fog,
-            valueColor: const AlwaysStoppedAnimation(_C.leaf), minHeight: 6)),
+          child: LinearProgressIndicator(value: progress, backgroundColor: AppColors.surfaceAlt,
+            valueColor: const AlwaysStoppedAnimation(AppColors.leaf), minHeight: 6)),
         const SizedBox(height: 16),
         Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
           _progressStep(s.farm, selectedFarm != null),
@@ -519,19 +599,19 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
 
   Widget _progressStep(String label, bool done) => Column(children: [
     Container(width: 28, height: 28,
-      decoration: BoxDecoration(shape: BoxShape.circle, color: done ? _C.leaf : _C.fog),
-      child: Icon(done ? Icons.check_rounded : Icons.circle_outlined, color: done ? Colors.white : _C.slate, size: 16)),
+      decoration: BoxDecoration(shape: BoxShape.circle, color: done ? AppColors.leaf : AppColors.surfaceAlt),
+      child: Icon(done ? Icons.check_rounded : Icons.circle_outlined, color: done ? Colors.white : AppColors.slate, size: 16)),
     const SizedBox(height: 4),
-    Text(label, style: TextStyle(fontSize: 11, color: done ? _C.forest : _C.slate, fontWeight: done ? FontWeight.w600 : FontWeight.normal)),
+    Text(label, style: TextStyle(fontSize: 11, color: done ? AppColors.forest : AppColors.slate, fontWeight: done ? FontWeight.w600 : FontWeight.normal)),
   ]);
 
   Widget _buildQuickButtons(AppStrings s) => Wrap(spacing: 8, runSpacing: 8, children: [
-    _quickBtn(s.disease, Icons.coronavirus_rounded, _C.disease),
-    _quickBtn(s.pest, Icons.bug_report_rounded, _C.pest),
-    _quickBtn(s.waterStress, Icons.water_drop_rounded, _C.water),
-    _quickBtn(s.nutrition, Icons.eco_rounded, _C.nutrition),
-    _quickBtn(s.irrigation, Icons.water_rounded, _C.irrigation),
-    _quickBtn(s.other, Icons.warning_amber_rounded, _C.other),
+    _quickBtn(s.disease, Icons.coronavirus_rounded, AppColors.disease),
+    _quickBtn(s.pest, Icons.bug_report_rounded, AppColors.pest),
+    _quickBtn(s.waterStress, Icons.water_drop_rounded, AppColors.water),
+    _quickBtn(s.nutrition, Icons.eco_rounded, AppColors.nutrition),
+    _quickBtn(s.irrigation, Icons.water_rounded, AppColors.irrigation),
+    _quickBtn(s.other, Icons.warning_amber_rounded, AppColors.other),
   ]);
 
   Widget _quickBtn(String label, IconData icon, Color color) => InkWell(
@@ -551,35 +631,53 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
   );
 
   Widget _buildSectionLabel(String label) => Text(label,
-    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: _C.slate));
+    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.2, color: AppColors.slate));
 
   Widget _buildAddFindingButton(AppStrings s) => OutlinedButton.icon(
     icon: const Icon(Icons.add_rounded, size: 18),
     label: Text(s.addFinding),
     onPressed: _addFinding,
     style: OutlinedButton.styleFrom(
-      foregroundColor: _C.canopy,
-      side: const BorderSide(color: _C.divider),
+      foregroundColor: AppColors.canopy,
+      side: const BorderSide(color: AppColors.divider),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
     ),
   );
 
-  Widget _buildSubmitButton(AppStrings s) => SizedBox(
-    width: double.infinity, height: 54,
-    child: ElevatedButton.icon(
-      icon: _submitting
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-          : const Icon(Icons.check_circle_rounded),
-      label: Text(_submitting ? s.submitting : s.submitReport,
-        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
-      // Disabled if submitting OR already submitted (duplicate guard)
-      onPressed: (_submitting || _submitted) ? null : _submitReport,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: _C.forest, foregroundColor: Colors.white, elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  Widget _buildSubmitButton(AppStrings s) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      if (_queueCount > 0)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            const Icon(Icons.cloud_off_rounded, size: 14, color: Color(0xFFBA7517)),
+            const SizedBox(width: 6),
+            Text(
+              '$_queueCount report${_queueCount > 1 ? "s" : ""} queued — will sync when online',
+              style: const TextStyle(fontSize: 12, color: Color(0xFFBA7517),
+                  fontWeight: FontWeight.w500),
+            ),
+          ]),
+        ),
+      SizedBox(
+        width: double.infinity, height: 54,
+        child: ElevatedButton.icon(
+          icon: _submitting
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : const Icon(Icons.check_circle_rounded),
+          label: Text(_submitting ? s.submitting : s.submitReport,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          // Disabled if submitting OR already submitted (duplicate guard)
+          onPressed: (_submitting || _submitted) ? null : _submitReport,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.forest, foregroundColor: Colors.white, elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          ),
+        ),
       ),
-    ),
+    ],
   );
 }
 
@@ -603,6 +701,9 @@ class _FindingCard extends StatefulWidget {
 
 class _FindingCardState extends State<_FindingCard> {
   late TextEditingController _issueCtrl;
+  final _picker = ImagePicker();
+  bool _pickingPhoto = false;
+  final Map<String, Uint8List> _bytesCache = {}; // prevents FutureBuilder blink
 
   List<String> get _categories => [
     widget.s.disease, widget.s.pest, widget.s.waterStress,
@@ -613,18 +714,135 @@ class _FindingCardState extends State<_FindingCard> {
   ];
 
   Color _categoryColor(String c) {
-    if (c == widget.s.disease) return const Color(0xFFD32F2F);
-    if (c == widget.s.pest) return const Color(0xFFE65100);
-    if (c == widget.s.waterStress) return const Color(0xFF0277BD);
-    if (c == widget.s.nutrition) return const Color(0xFF388E3C);
-    if (c == widget.s.irrigation) return const Color(0xFF00838F);
-    return const Color(0xFF455A64);
+    if (c == widget.s.disease) return AppColors.disease;
+    if (c == widget.s.pest) return AppColors.pest;
+    if (c == widget.s.waterStress) return AppColors.water;
+    if (c == widget.s.nutrition) return AppColors.nutrition;
+    if (c == widget.s.irrigation) return AppColors.irrigation;
+    return AppColors.other;
   }
 
   @override
   void initState() {
     super.initState();
     _issueCtrl = TextEditingController(text: widget.data.issue);
+  }
+
+  Future<void> _pickPhoto(ImageSource source) async {
+    if (_pickingPhoto) return;
+    setState(() => _pickingPhoto = true);
+    try {
+      final file = await _picker.pickImage(source: source, imageQuality: 80, maxWidth: 1920);
+      if (file != null) {
+        final bytes = await file.readAsBytes();
+        _bytesCache[file.name] = bytes;
+        setState(() => widget.data.photoFiles.add(file));
+        widget.onChanged();
+      }
+    } catch (e) {
+      debugPrint('[photos] pick failed: \$e');
+    } finally {
+      if (mounted) setState(() => _pickingPhoto = false);
+    }
+  }
+
+  void _removePhoto(int index) {
+    final file = widget.data.photoFiles[index];
+    _bytesCache.remove(file.name);
+    setState(() => widget.data.photoFiles.removeAt(index));
+    widget.onChanged();
+  }
+
+  Widget _buildPhotoRow() {
+    final photos = widget.data.photoFiles;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 14),
+      Row(children: [
+        const Icon(Icons.photo_camera_rounded, size: 14, color: Color(0xFF6B7F6E)),
+        const SizedBox(width: 6),
+        Text('Photos (${photos.length}/5)',
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
+                color: Color(0xFF6B7F6E), letterSpacing: 0.5)),
+        const Spacer(),
+        if (photos.length < 5) ...[
+          GestureDetector(
+              onTap: () => _pickPhoto(ImageSource.camera),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.canopy.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.canopy.withValues(alpha: 0.2)),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Icon(Icons.camera_alt_rounded, size: 14, color: Color(0xFF2D6A4F)),
+                  const SizedBox(width: 4),
+                  const Text('Camera', style: TextStyle(fontSize: 11,
+                      color: Color(0xFF2D6A4F), fontWeight: FontWeight.w600)),
+                ]),
+              ),
+            ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _pickPhoto(ImageSource.gallery),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: AppColors.canopy.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.canopy.withValues(alpha: 0.2)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.photo_library_rounded, size: 14, color: Color(0xFF2D6A4F)),
+                const SizedBox(width: 4),
+                const Text('Gallery', style: TextStyle(fontSize: 11,
+                    color: Color(0xFF2D6A4F), fontWeight: FontWeight.w600)),
+              ]),
+            ),
+          ),
+        ],
+      ]),
+      if (photos.isNotEmpty) ...[
+        const SizedBox(height: 10),
+        SizedBox(
+          height: 80,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: photos.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemBuilder: (context, i) => Stack(children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Builder(builder: (context) {
+                  final bytes = _bytesCache[photos[i].name];
+                  if (bytes == null) { return Container(
+                    width: 80, height: 80,
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceAlt,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.image_rounded, color: Color(0xFF6B7F6E)),
+                  ); }
+                  return Image.memory(bytes,
+                      width: 80, height: 80, fit: BoxFit.cover);
+                }),
+              ),
+              Positioned(top: 2, right: 2,
+                child: GestureDetector(
+                  onTap: () => _removePhoto(i),
+                  child: Container(
+                    width: 20, height: 20,
+                    decoration: const BoxDecoration(
+                        color: Color(0xFFD32F2F), shape: BoxShape.circle),
+                    child: const Icon(Icons.close_rounded, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        ),
+      ],
+    ]);
   }
 
   @override
@@ -637,7 +855,7 @@ class _FindingCardState extends State<_FindingCard> {
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white, borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFDDE5DD)),
+        border: Border.all(color: AppColors.divider),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 8, offset: const Offset(0, 2))],
       ),
       child: Column(children: [
@@ -676,7 +894,7 @@ class _FindingCardState extends State<_FindingCard> {
               widget.data.issue = v;
               widget.onChanged();
             }),
-            const SizedBox(height: 14),
+            _buildPhotoRow(),
           ]),
         ),
       ]),
@@ -688,7 +906,7 @@ class _FindingCardState extends State<_FindingCard> {
       Padding(padding: const EdgeInsets.only(left: 2, bottom: 6),
         child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF6B7F6E)))),
       Container(
-        decoration: BoxDecoration(color: const Color(0xFFF8FAF8), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFDDE5DD))),
+        decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.divider)),
         child: DropdownButtonHideUnderline(child: DropdownButton<String>(
           value: items.contains(value) ? value : items.first,
           isExpanded: true,
@@ -706,7 +924,7 @@ class _FindingCardState extends State<_FindingCard> {
       Padding(padding: const EdgeInsets.only(left: 2, bottom: 6),
         child: Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, letterSpacing: 1.0, color: Color(0xFF6B7F6E)))),
       Container(
-        decoration: BoxDecoration(color: const Color(0xFFF8FAF8), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFDDE5DD))),
+        decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(10), border: Border.all(color: AppColors.divider)),
         child: TextField(
           controller: ctrl, onChanged: onChanged,
           style: const TextStyle(fontSize: 13, color: Color(0xFF0D1B0F)),
@@ -718,3 +936,4 @@ class _FindingCardState extends State<_FindingCard> {
       ),
     ]);
 }
+

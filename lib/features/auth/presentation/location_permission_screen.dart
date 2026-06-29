@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../shared/widgets/app_shell.dart';
-import '../../../core/location/location_tracking_service.dart';
+import '../../../shared/l10n/app_strings.dart';
+import '../../../shared/providers/locale_provider.dart';
 
-class LocationPermissionScreen extends StatefulWidget {
+class LocationPermissionScreen extends ConsumerStatefulWidget {
   final String scoutName;
 
   const LocationPermissionScreen({
@@ -12,15 +14,17 @@ class LocationPermissionScreen extends StatefulWidget {
   });
 
   @override
-  State<LocationPermissionScreen> createState() =>
+  ConsumerState<LocationPermissionScreen> createState() =>
       _LocationPermissionScreenState();
 }
 
 class _LocationPermissionScreenState
-    extends State<LocationPermissionScreen> {
+    extends ConsumerState<LocationPermissionScreen> {
   bool _checking = false;
 
-  // Navigate directly from here — no callback needed
+  AppStrings get s => AppStrings.of(ref.watch(localeProvider));
+
+  // Navigate directly from here ï¿½ no callback needed
   void _goToApp() {
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -44,12 +48,11 @@ class _LocationPermissionScreenState
         return;
       }
     } catch (_) {
-      // Any error — still go to app
+      // Any error ï¿½ still go to app
     }
 
     setState(() => _checking = false);
 
-    LocationTrackingService.instance.startTracking();
 
     _goToApp();
   }
@@ -61,12 +64,12 @@ class _LocationPermissionScreenState
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16)),
-        title: const Text('Location blocked',
-            style: TextStyle(
+        title: Text(s.locationBlocked,
+            style: const TextStyle(
                 fontSize: 16, fontWeight: FontWeight.w600)),
         content: const Text(
           'Location was permanently denied. Open settings to '
-          'enable it, or continue without GPS — scouting routes '
+          'enable it, or continue without GPS ï¿½ scouting routes '
           'won\'t be recorded.',
           style: TextStyle(fontSize: 14, height: 1.5),
         ),
@@ -76,8 +79,8 @@ class _LocationPermissionScreenState
               Navigator.pop(context);
               _goToApp();
             },
-            child: const Text('Continue anyway',
-                style: TextStyle(color: Color(0xFF888780))),
+            child: Text(s.continueAnyway,
+                style: const TextStyle(color: Color(0xFF888780))),
           ),
           TextButton(
             onPressed: () async {
@@ -85,8 +88,8 @@ class _LocationPermissionScreenState
               await Geolocator.openAppSettings();
               _goToApp();
             },
-            child: const Text('Open settings',
-                style: TextStyle(color: Color(0xFF1D9E75))),
+            child: Text(s.openAppSettings,
+                style: const TextStyle(color: Color(0xFF1D9E75))),
           ),
         ],
       ),
@@ -138,7 +141,7 @@ class _LocationPermissionScreenState
 
                   SizedBox(height: isTablet ? 28 : 20),
 
-                  Text('Allow location access',
+                  Text(s.allowLocationAccess,
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: isTablet ? 22 : 19,
@@ -172,11 +175,11 @@ class _LocationPermissionScreenState
                     ),
                     child: Column(children: [
                       _Reason(Icons.route_rounded,
-                          'Records your walking trail across the farm',
+                          s.recordsTrail,
                           isTablet),
                       const SizedBox(height: 12),
                       _Reason(Icons.grid_view_rounded,
-                          'Tracks which farm zones are covered or missed',
+                          s.tracksZones,
                           isTablet),
                       const SizedBox(height: 12),
                       _Reason(Icons.speed_rounded,
@@ -184,7 +187,7 @@ class _LocationPermissionScreenState
                           isTablet),
                       const SizedBox(height: 12),
                       _Reason(Icons.bar_chart_rounded,
-                          'Powers distance and coverage analytics',
+                          s.powersAnalytics,
                           isTablet),
                     ]),
                   ),
@@ -210,7 +213,7 @@ class _LocationPermissionScreenState
                               child: CircularProgressIndicator(
                                   color: Colors.white,
                                   strokeWidth: 2))
-                          : Text('Allow while using app',
+                          : Text(s.allowWhileUsing,
                               style: TextStyle(
                                   fontSize: isTablet ? 16 : 14,
                                   fontWeight:
@@ -234,7 +237,7 @@ class _LocationPermissionScreenState
                             borderRadius:
                                 BorderRadius.circular(50)),
                       ),
-                      child: Text('Not now',
+                      child: Text(s.notNow,
                           style: TextStyle(
                               fontSize: isTablet ? 15 : 13)),
                     ),

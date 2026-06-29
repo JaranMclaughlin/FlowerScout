@@ -2,9 +2,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'models/scout_trail.dart';
-import 'data/trail_repository.dart';
 import 'providers/trail_providers.dart';
 import '../providers/farm_providers.dart';
+import '../../../core/session/user_session.dart';
 
 class TrailSessionState {
   final bool isActive;
@@ -53,6 +53,7 @@ class TrailTrackingController extends Notifier<TrailSessionState> {
       scoutId: scoutId,
       farmId: farmId,
       greenhouseId: greenhouseId,
+      scoutName: UserSession.currentUser.isNotEmpty ? UserSession.currentUser : null,
     );
 
     _buffer.clear();

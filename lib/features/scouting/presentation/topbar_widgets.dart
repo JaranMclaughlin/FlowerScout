@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import '../../../shared/l10n/app_strings.dart';
+import '../../../shared/providers/locale_provider.dart';
 
 class _C {
   static const forest = Color(0xFF1B4332);
@@ -229,6 +232,9 @@ class _WeatherChipState extends State<WeatherChip>
                   color: _C.graphite,
                 ),
               ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -250,7 +256,7 @@ class _WeatherChipState extends State<WeatherChip>
               duration: const Duration(milliseconds: 800),
               curve: Curves.easeOut,
               builder: (_, val, _) => Text(
-                '°C',
+                'ï¿½C',
                 style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
@@ -339,7 +345,7 @@ class _LiveDotState extends State<_LiveDot> with SingleTickerProviderStateMixin 
 
 //  WEATHER DETAIL BOTTOM SHEET
 
-class _WeatherDetailSheet extends StatelessWidget {
+class _WeatherDetailSheet extends ConsumerWidget {
   final WeatherData weather;
   final Widget Function(String, double) iconBuilder;
 
@@ -349,10 +355,11 @@ class _WeatherDetailSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = AppStrings.of(ref.watch(localeProvider));
     final mins =
         DateTime.now().difference(weather.fetchedAt).inMinutes;
-    final freshLabel = mins == 0 ? 'Just now' : '${mins}m ago';
+    final freshLabel = mins == 0 ? s.justNow : '${mins}m ago';
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -403,8 +410,7 @@ class _WeatherDetailSheet extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '°C',
-                      Text(
+                        '${weather.tempC.round()}Â°C',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,
@@ -470,10 +476,10 @@ class _WeatherDetailSheet extends StatelessWidget {
                 _StatTile(
                     icon: Icons.thermostat_rounded,
                     color: const Color(0xFFE65100),
-                    label: 'Feels like',
-                    label: 'Feels like',
-                    value: '°C',
-                  ),
+                    label: s.feelsLike,
+                    value: '${weather.tempC.round()}Â°C'),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
         ],
@@ -713,7 +719,7 @@ class _NotificationBellState extends State<NotificationBell>
 
 //  NOTIFICATION PANEL (bottom sheet)
 
-class _NotificationPanel extends StatelessWidget {
+class _NotificationPanel extends ConsumerWidget {
   final List<NotificationItem> notifications;
   final VoidCallback onMarkAllRead;
   final ValueChanged<String> onMarkRead;
@@ -726,16 +732,17 @@ class _NotificationPanel extends StatelessWidget {
     required this.onDismiss,
   });
 
-  String _timeAgo(DateTime t) {
+  String _timeAgo(DateTime t, AppStrings s) {
     final diff = DateTime.now().difference(t);
-    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 1) return s.justNow;
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     return '${diff.inDays}d ago';
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = AppStrings.of(ref.watch(localeProvider));
     final unread = notifications.where((n) => !n.isRead).length;
 
     return DraggableScrollableSheet(
@@ -767,8 +774,8 @@ class _NotificationPanel extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Notifications',
+                      Text(
+                        s.navScouting == 'Ukaguzi' ? 'Arifa' : 'Notifications',
                         style: TextStyle(
                           fontFamily: 'Georgia',
                           fontSize: 20,
@@ -790,7 +797,7 @@ class _NotificationPanel extends StatelessWidget {
                       onPressed: onMarkAllRead,
                       icon: const Icon(Icons.done_all_rounded,
                           size: 16, color: _C.leaf),
-                      label: const Text('Mark all read',
+                      label: Text(s.markAllRead,
                           style: TextStyle(
                               color: _C.leaf,
                               fontSize: 13,
@@ -803,7 +810,7 @@ class _NotificationPanel extends StatelessWidget {
             // List
             Expanded(
               child: notifications.isEmpty
-                  ? _buildEmpty()
+                  ? _buildEmpty(s)
                   : ListView.separated(
                       controller: scrollCtrl,
                       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -826,7 +833,7 @@ class _NotificationPanel extends StatelessWidget {
                           onDismissed: (_) => onDismiss(n.id),
                           child: _NotificationTile(
                             item: n,
-                            timeLabel: _timeAgo(n.time),
+                            timeLabel: _timeAgo(n.time, s),
                             onTap: () => onMarkRead(n.id),
                           ),
                         );
@@ -839,7 +846,7 @@ class _NotificationPanel extends StatelessWidget {
     );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmpty(AppStrings s) {
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -855,14 +862,14 @@ class _NotificationPanel extends StatelessWidget {
                 size: 36, color: _C.leaf),
           ),
           const SizedBox(height: 16),
-          const Text('All caught up!',
-              style: TextStyle(
+          Text(s.allCaughtUp,
+              style: const TextStyle(
                   fontFamily: 'Georgia',
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
                   color: _C.ink)),
           const SizedBox(height: 6),
-          const Text('No new notifications',
+          Text(s.noNewNotifications,
               style: TextStyle(fontSize: 13, color: _C.slate)),
         ],
       ),

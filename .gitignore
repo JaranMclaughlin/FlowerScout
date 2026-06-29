@@ -83,3 +83,4 @@ test_write.txt
 
 # Broken copies
 *.broken.yaml
+.env

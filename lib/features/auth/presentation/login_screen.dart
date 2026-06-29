@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/constants/motivational_messages.dart';
-import '../../../shared/widgets/app_shell.dart';
 import '../../../shared/providers/locale_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {

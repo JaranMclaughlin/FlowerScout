@@ -192,12 +192,11 @@ class _AppShellState extends ConsumerState<AppShell> {
           );
           if (confirm == true) {
             await Supabase.instance.client.auth.signOut();
-            if (mounted) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            }
+            if (!mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const LoginScreen()),
+              (route) => false,
+            );
           }
         },
         child: Container(
@@ -231,3 +230,5 @@ class _NavItem {
   final int pageIndex;
   const _NavItem(this.icon, this.iconOutlined, this.label, this.pageIndex);
 }
+
+

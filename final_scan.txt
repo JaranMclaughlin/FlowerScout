@@ -1,0 +1,10 @@
+farm_repository.dart:244: Not authenticated
+main.dart:37: Flower Scout
+settings_screen.dart:62: System default
+topbar_widgets.dart:41: Partly Cloudy
+topbar_widgets.dart:548: High Severity Alert
+topbar_widgets.dart:549: Potential pest outbreak detected
+topbar_widgets.dart:556: Inspection Due
+topbar_widgets.dart:564: Report Ready
+topbar_widgets.dart:565: Weekly scouting summary is ready to view
+topbar_widgets.dart:572: Irrigation Alert

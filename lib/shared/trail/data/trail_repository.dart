@@ -9,19 +9,16 @@ class TrailRepository {
     required String scoutId,
     String? farmId,
     String? greenhouseId,
+    String? scoutName,
   }) async {
-    final profileRes = await _db
-        .from('user_profiles')
-        .select('full_name')
-        .eq('id', scoutId)
-        .maybeSingle();
-    final scoutName = profileRes?['full_name'] as String?;
-
     final res = await _db.from('scout_trails').insert({
       'scout_id': scoutId,
-      'scout_name': scoutName,
-      'farm_id': farmId,
-      'greenhouse_id': greenhouseId,
+      // ignore: use_null_aware_elements
+      if (scoutName != null) 'scout_name': scoutName,
+      // ignore: use_null_aware_elements
+      if (farmId != null) 'farm_id': farmId,
+      // ignore: use_null_aware_elements
+      if (greenhouseId != null) 'greenhouse_id': greenhouseId,
       'started_at': DateTime.now().toIso8601String(),
     }).select('id').single();
 
@@ -43,10 +40,21 @@ class TrailRepository {
   }) async {
     await _db.from('scout_trails').update({
       'ended_at': DateTime.now().toIso8601String(),
+      // ignore: use_null_aware_elements
       if (reportId != null) 'report_id': reportId,
+      // ignore: use_null_aware_elements
       if (farmId != null) 'farm_id': farmId,
+      // ignore: use_null_aware_elements
       if (greenhouseId != null) 'greenhouse_id': greenhouseId,
     }).eq('id', trailId);
+  }
+
+  /// Force-ends any trail older than [maxAge] that never got ended_at set.
+  Future<void> endStaleTrails({Duration maxAge = const Duration(hours: 4)}) async {
+    final cutoff = DateTime.now().subtract(maxAge).toIso8601String();
+    await _db.from('scout_trails').update({
+      'ended_at': DateTime.now().toIso8601String(),
+    }).filter('ended_at', 'is', null).lt('started_at', cutoff);
   }
 
   Future<void> deleteTrail(String trailId) async {
@@ -56,20 +64,20 @@ class TrailRepository {
   Future<List<ScoutTrail>> getActiveTrails() async {
     final res = await _db
         .from('scout_trails')
-        .select('*, trail_points(*)')
+        .select('id, scout_id, scout_name, farm_id, greenhouse_id, report_id, started_at, ended_at')
         .filter('ended_at', 'is', null)
         .order('started_at', ascending: false);
-    return _parseTrails(res as List<dynamic>);
+    return _parseTrails(res as List, includePoints: false);
   }
 
   Future<List<ScoutTrail>> getTrailHistory() async {
     final res = await _db
         .from('scout_trails')
-        .select('*, trail_points(*)')
+        .select('id, scout_id, scout_name, farm_id, greenhouse_id, report_id, started_at, ended_at')
         .not('ended_at', 'is', null)
         .order('started_at', ascending: false)
         .limit(100);
-    return _parseTrails(res as List<dynamic>);
+    return _parseTrails(res as List, includePoints: false);
   }
 
   Future<ScoutTrail> getTrailById(String trailId) async {
@@ -79,13 +87,16 @@ class TrailRepository {
         .eq('id', trailId)
         .single();
     final points = _parsePoints(res['trail_points'] as List<dynamic>? ?? []);
+    // ignore: unnecessary_cast
     return ScoutTrail.fromMap(res as Map<String, dynamic>, points: points);
   }
 
-  List<ScoutTrail> _parseTrails(List<dynamic> rows) {
+  List<ScoutTrail> _parseTrails(List<dynamic> rows, {bool includePoints = true}) {
     return rows.map((row) {
       final m = row as Map<String, dynamic>;
-      final points = _parsePoints(m['trail_points'] as List<dynamic>? ?? []);
+      final points = includePoints
+          ? _parsePoints(m['trail_points'] as List<dynamic>? ?? [])
+          : const <TrailPoint>[];
       return ScoutTrail.fromMap(m, points: points);
     }).toList();
   }
@@ -98,3 +109,5 @@ class TrailRepository {
     return pts;
   }
 }
+
+

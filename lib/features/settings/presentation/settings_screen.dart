@@ -25,6 +25,7 @@ class _C {
 }
 
 class _T {
+  // ignore: unused_field
   static const heading = TextStyle(fontFamily: 'Georgia', fontSize: 20,
       fontWeight: FontWeight.w600, color: _C.ink, letterSpacing: -0.3);
   static const label = TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
@@ -59,7 +60,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _notifSms      = false;
 
   // Preferences
-  String _theme      = s.systemDefault;
+  // Localisation snapshot - set at top of build(), safe to use anywhere in the class
+  late AppStrings _s;
+  String _theme      = 'system'; // stable key: 'system' | 'light' | 'dark'
   String _dateFormat = 'DD/MM/YYYY';
   String _mapDefault = 'Satellite';
   bool   _heatmap    = true;
@@ -100,6 +103,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    _s = s; // snapshot locale once per build - safe to read via _s anywhere
     // Populate profile fields once loaded
     final profileAsync = ref.watch(profileProvider);
     profileAsync.whenData((profile) {
@@ -137,7 +141,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 28, 20, 16),
-          child: Text(s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
+          child: Text(_s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
               fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
         ),
         const Divider(height: 0.5, thickness: 0.5, color: _C.divider),
@@ -187,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
-        child: Text(s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
+        child: Text(_s.settingsTitle, style: const TextStyle(fontFamily: 'Georgia',
             fontSize: 22, fontWeight: FontWeight.w700, color: _C.ink)),
       ),
       SingleChildScrollView(
@@ -261,17 +265,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final farmsAsync = ref.watch(farmsProvider);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionHeader(s.farmGhConfigTitle,
-          s.farmGhConfigDesc,
+      _sectionHeader(_s.farmGhConfigTitle,
+          _s.farmGhConfigDesc,
           Icons.agriculture_rounded, _C.leaf),
       const SizedBox(height: 24),
 
       farmsAsync.when(
-        loading: () => const _LoadingCard(message: s.loadingFarms),
+        loading: () => _LoadingCard(message: _s.loadingFarms),
         error:   (e, _) => _ErrorCard(message: e.toString(),
             onRetry: () => ref.read(farmsProvider.notifier).refresh()),
         data: (farms) => farms.isEmpty
-            ? const _EmptyCard(message: s.noFarmsAssigned)
+            ? _EmptyCard(message: _s.noFarmsAssigned)
             : Column(children: [
                 ...farms.map((farm) => _farmCard(farm, isWide)),
                 const SizedBox(height: 16),
@@ -279,8 +283,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: 'INSPECTION DEFAULTS',
                   child: Column(children: [
                     _settingRow(
-                      label: s.inspectionInterval,
-                      subtitle: s.inspectionIntervalDesc,
+                      label: _s.inspectionInterval,
+                      subtitle: _s.inspectionIntervalDesc,
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                         _iconBtn(Icons.remove_rounded, () {
                           if (_interval > 1) setState(() => _interval--);
@@ -297,8 +301,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ),
                     _divider(),
                     _settingRow(
-                      label: s.refreshData,
-                      subtitle: s.refreshDataDesc,
+                      label: _s.refreshData,
+                      subtitle: _s.refreshDataDesc,
                       trailing: _outlineBtn('Refresh', () =>
                           ref.read(farmsProvider.notifier).refresh()),
                     ),
@@ -317,7 +321,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     return ValueListenableBuilder<bool>(
       valueListenable: expanded,
-      builder: (_, isExpanded, __) => Container(
+      builder: (_, isExpanded, _) => Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: BoxDecoration(
           color: _C.paper, borderRadius: BorderRadius.circular(18),
@@ -425,7 +429,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           scale: 0.82,
           child: Switch.adaptive(
             value: gh.isActive,
-            activeColor: _C.leaf,
+            activeThumbColor: _C.leaf,
             onChanged: _isManager
                 ? (v) => ref.read(farmsProvider.notifier)
                     .toggleGreenhouse(gh.id, v)
@@ -442,17 +446,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildProfileTab(bool isWide) {
     final profileAsync = ref.watch(profileProvider);
     return profileAsync.when(
-      loading: () => const _LoadingCard(message: s.loadingProfile),
+      loading: () => _LoadingCard(message: _s.loadingProfile),
       error:   (e, _) => _ErrorCard(message: e.toString(),
           onRetry: () => ref.read(profileProvider.notifier).refresh()),
       data: (profile) => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeader(s.yourProfile,
-              s.yourProfileDesc,
+          _sectionHeader(_s.yourProfile,
+              _s.yourProfileDesc,
               Icons.person_rounded, _C.canopy),
           const SizedBox(height: 24),
-          _card(label: s.personalInfo, child: Column(children: [
+          _card(label: _s.personalInfo, child: Column(children: [
             // Avatar row
             Row(children: [
               Container(width: 56, height: 56,
@@ -478,16 +482,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               )),
             ]),
             _divider(),
-            _styledTextField(label: s.fullName, controller: _nameCtrl),
+            _styledTextField(label: _s.fullName, controller: _nameCtrl),
             const SizedBox(height: 14),
-            _styledTextField(label: s.emailLabel, controller: _emailCtrl,
+            _styledTextField(label: _s.emailLabel, controller: _emailCtrl,
                 keyboardType: TextInputType.emailAddress),
             const SizedBox(height: 14),
-            _styledTextField(label: s.phone, controller: _phoneCtrl,
+            _styledTextField(label: _s.phone, controller: _phoneCtrl,
                 keyboardType: TextInputType.phone),
           ])),
           const SizedBox(height: 24),
-          _saveButton(s.saveProfile, onTap: () async {
+          _saveButton(_s.saveProfile, onTap: () async {
             await ref.read(profileProvider.notifier).save(
               fullName: _nameCtrl.text.trim(),
               phone: _phoneCtrl.text.trim().isEmpty
@@ -505,19 +509,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildTeamTab(bool isWide) {
     final teamAsync = ref.watch(teamProvider);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      _sectionHeader(s.teamManagement,
-          s.teamManagementDesc,
+      _sectionHeader(_s.teamManagement,
+          _s.teamManagementDesc,
           Icons.group_rounded, _C.canopy),
       const SizedBox(height: 24),
       teamAsync.when(
-        loading: () => const _LoadingCard(message: s.loadingTeam),
+        loading: () => _LoadingCard(message: _s.loadingTeam),
         error:   (e, _) => _ErrorCard(message: e.toString(), onRetry: () {
           ref.invalidate(teamProvider);
         }),
         data: (members) => _card(
           label: 'TEAM MEMBERS (${members.length})',
           child: members.isEmpty
-              ? const _EmptyCard(message: s.noTeamMembers)
+              ? _EmptyCard(message: _s.noTeamMembers)
               : Column(
                   children: members.asMap().entries.map((e) {
                     final m = e.value;
@@ -553,7 +557,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onChanged: (v) => setState(() => _inviteRole = v!)),
           ],
           const SizedBox(height: 16),
-          _saveButton(s.sendInvite,
+          _saveButton(_s.sendInvite,
               icon: Icons.send_rounded, color: _C.canopy),
         ]),
       ),
@@ -592,37 +596,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildNotificationsTab() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionHeader(s.notificationsAlerts,
-          s.controlNotif,
+      _sectionHeader(_s.notificationsAlerts,
+          _s.controlNotif,
           Icons.notifications_rounded, _C.canopy),
       const SizedBox(height: 24),
-      _card(label: s.inspectionAlerts, child: Column(children: [
-        _toggleRow(s.overdueReminder,
-            s.overdueDesc,
+      _card(label: _s.inspectionAlerts, child: Column(children: [
+        _toggleRow(_s.overdueReminder,
+            _s.overdueDesc,
             _notifOverdue, (v) => setState(() => _notifOverdue = v)),
         _divider(),
-        _toggleRow(s.criticalAlert,
-            s.criticalAlertDesc,
+        _toggleRow(_s.criticalAlert,
+            _s.criticalAlertDesc,
             _notifCritical, (v) => setState(() => _notifCritical = v)),
         _divider(),
-        _toggleRow(s.weeklySummary,
-            s.weeklyDescFull,
+        _toggleRow(_s.weeklySummary,
+            _s.weeklyDescFull,
             _notifWeekly, (v) => setState(() => _notifWeekly = v)),
       ])),
       const SizedBox(height: 12),
-      _card(label: s.deliveryChannels, child: Column(children: [
-        _toggleRow(s.pushNotifications, s.pushDesc,
+      _card(label: _s.deliveryChannels, child: Column(children: [
+        _toggleRow(_s.pushNotifications, _s.pushDesc,
             _notifPush, (v) => setState(() => _notifPush = v)),
         _divider(),
         _toggleRow('Email', _emailCtrl.text.isEmpty
-            ? s.notSet : _emailCtrl.text,
+            ? _s.notSet : _emailCtrl.text,
             _notifEmail, (v) => setState(() => _notifEmail = v)),
         _divider(),
-        _toggleRow('SMS', s.addPhoneForSms,
+        _toggleRow('SMS', _s.addPhoneForSms,
             _notifSms, (v) => setState(() => _notifSms = v)),
       ])),
       const SizedBox(height: 24),
-      _saveButton(s.saveNotifSettings),
+      _saveButton(_s.saveNotifSettings),
     ],
   );
 
@@ -632,14 +636,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget _buildPreferencesTab(bool isWide) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      _sectionHeader(s.appPreferences,
-          s.personaliseDesc,
+      _sectionHeader(_s.appPreferences,
+          _s.personaliseDesc,
           Icons.tune_rounded, _C.canopy),
       const SizedBox(height: 24),
       Consumer(builder: (context, ref, _) {
         final lang = ref.watch(localeProvider);
-        final s    = ref.watch(stringsProvider);
-        return _card(label: s.language, child: Row(children: [
+        return _card(label: _s.language, child: Row(children: [
           Expanded(child: GestureDetector(
             onTap: () => ref.read(localeProvider.notifier).setLanguage('en'),
             child: AnimatedContainer(
@@ -677,9 +680,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       }),
       const SizedBox(height: 12),
       _card(label: 'APPEARANCE', child: Column(children: [
-        _labeledDropdown(label: 'THEME', value: _theme,
-            items: [s.systemDefault, 'Light', 'Dark'],
-            onChanged: (v) => setState(() => _theme = v!)),
+        _labeledDropdown(label: 'THEME', value: _themeLabel(_theme, _s),
+            items: _themeKeys.map((k) => _themeLabel(k, _s)).toList(),
+            onChanged: (v) => setState(() =>
+                _theme = _themeKeys[_themeKeys.map((k) => _themeLabel(k, _s)).toList().indexOf(v!)])),
         const SizedBox(height: 14),
         _labeledDropdown(label: 'DATE FORMAT', value: _dateFormat,
             items: ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD (ISO)'],
@@ -691,18 +695,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             items: ['Satellite', 'Terrain', 'Street'],
             onChanged: (v) => setState(() => _mapDefault = v!)),
         _divider(),
-        _toggleRow(s.showHeatmap,
-            s.showHeatmapDesc,
+        _toggleRow(_s.showHeatmap,
+            _s.showHeatmapDesc,
             _heatmap, (v) => setState(() => _heatmap = v)),
       ])),
       const SizedBox(height: 12),
       _card(label: 'ABOUT', child: Column(children: [
-        _settingRow(label: 'FlowerScout', subtitle: s.versionLabel,
+        _settingRow(label: 'FlowerScout', subtitle: _s.versionLabel,
             trailing: _statusBadge('Latest')),
         _divider(),
         _settingRow(
-          label: s.signOutLabel,
-          subtitle: s.logOut,
+          label: _s.signOutLabel,
+          subtitle: _s.logOut,
           labelColor: const Color(0xFFD32F2F),
           trailing: const Icon(Icons.logout_rounded,
               color: Color(0xFFD32F2F), size: 18),
@@ -710,7 +714,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ])),
       const SizedBox(height: 24),
-      _saveButton(s.savePreferences),
+      _saveButton(_s.savePreferences),
     ],
   );
 
@@ -766,7 +770,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ],
       )),
       const SizedBox(width: 12),
-      Switch.adaptive(value: value, activeColor: _C.leaf, onChanged: onChanged),
+      Switch.adaptive(value: value, activeThumbColor: _C.leaf, onChanged: onChanged),
     ]);
 
   Widget _settingRow({required String label, required String subtitle,
@@ -808,6 +812,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         ),
       ),
     ]);
+
+  static const _themeKeys = ['system', 'light', 'dark'];
+  String _themeLabel(String key, AppStrings s) => switch (key) {
+        'light' => 'Light',
+        'dark' => 'Dark',
+        _ => _s.systemDefault,
+      };
 
   Widget _labeledDropdown({required String label, required String value,
       required List<String> items, required ValueChanged<String?> onChanged}) =>
@@ -917,7 +928,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void _confirmSignOut() {
     showDialog(context: context, builder: (_) => AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: const Text(s.signOutQ, style: TextStyle(
+      title: Text(_s.signOutQ, style: const TextStyle(
           fontFamily: 'Georgia', fontSize: 18)),
       content: const Text(
           'You will need to log in again to access FlowerScout.'),
@@ -928,14 +939,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           onPressed: () async {
             Navigator.pop(context);
             await Supabase.instance.client.auth.signOut();
-            if (context.mounted) {
+            if (mounted) {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
                 (route) => false,
               );
             }
           },
-          child: const Text(s.signOutLabel,
+          child: Text(_s.signOutLabel,
               style: TextStyle(color: Color(0xFFD32F2F))),
         ),
       ],
@@ -952,19 +963,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   String _roleLabel(String role) => switch (role) {
-    'system_admin' => s.systemAdmin,
-    'manager'      => s.roleManager,
-    'scout'        => s.roleScout,
-    'viewer'       => s.roleViewer,
+    'system_admin' => _s.systemAdmin,
+    'manager'      => _s.roleManager,
+    'scout'        => _s.roleScout,
+    'viewer'       => _s.roleViewer,
     _              => role,
   };
 
   ({String label, IconData icon}) _tabMeta(_Tab tab) => switch (tab) {
-    _Tab.farms         => (label: s.tabFarms,   icon: Icons.agriculture_rounded),
-    _Tab.profile       => (label: s.tabProfile,       icon: Icons.person_rounded),
-    _Tab.team          => (label: s.tabTeam,          icon: Icons.group_rounded),
-    _Tab.notifications => (label: s.tabNotifications, icon: Icons.notifications_rounded),
-    _Tab.preferences   => (label: s.tabPreferences,  icon: Icons.tune_rounded),
+    _Tab.farms         => (label: _s.tabFarms,   icon: Icons.agriculture_rounded),
+    _Tab.profile       => (label: _s.tabProfile,       icon: Icons.person_rounded),
+    _Tab.team          => (label: _s.tabTeam,          icon: Icons.group_rounded),
+    _Tab.notifications => (label: _s.tabNotifications, icon: Icons.notifications_rounded),
+    _Tab.preferences   => (label: _s.tabPreferences,  icon: Icons.tune_rounded),
   };
 }
 

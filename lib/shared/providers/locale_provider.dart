@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../l10n/app_strings.dart';
 
+// ignore: unused_element
 const _kLocaleKey = 'flutter.locale';
 
 class LocaleNotifier extends Notifier<String> {

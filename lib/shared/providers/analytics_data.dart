@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/app_strings.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'farm_providers.dart';
+import 'locale_provider.dart';
 
 // ── Models ──────────────────────────────────────────────────────────────
 
@@ -14,6 +15,7 @@ class InspectionRecord {
   final String category;
   final String severity;
   final String inspectorId;
+  final String inspectorName;
 
   const InspectionRecord({
     required this.id,
@@ -24,6 +26,7 @@ class InspectionRecord {
     required this.category,
     required this.severity,
     required this.inspectorId,
+    this.inspectorName = '',
   });
 
   factory InspectionRecord.fromRow(Map<String, dynamic> r, String lang) {
@@ -39,11 +42,23 @@ class InspectionRecord {
       }
     }
     final findings = r['inspection_findings'] as List?;
-    final topCat = findings != null && findings.isNotEmpty
-        ? (findings.first['category'] as String? ?? 'Other') : 'Other';
-    final topSev = findings != null && findings.isNotEmpty
-        ? (findings.first['severity'] as String? ?? 'Low') : 'Low';
+    // Pick the finding with the highest severity, not just the first one.
+    const sevRank = {'Critical': 4, 'High': 3, 'Medium': 2, 'Low': 1};
+    String topCat = 'Other';
+    String topSev = 'Low';
+    if (findings != null && findings.isNotEmpty) {
+      Map<String, dynamic> worst = Map<String, dynamic>.from(findings.first as Map);
+      for (final f in findings) {
+        final fm = f as Map;
+        final rank = sevRank[fm['severity'] as String? ?? 'Low'] ?? 1;
+        final worstRank = sevRank[worst['severity'] as String? ?? 'Low'] ?? 1;
+        if (rank > worstRank) worst = Map<String, dynamic>.from(fm);
+      }
+      topCat = worst['category'] as String? ?? 'Other';
+      topSev = worst['severity'] as String? ?? 'Low';
+    }
     final scoutId = r['scout_id']?.toString() ?? '';
+    final scoutName = r['scout_name'] as String? ?? r['user_profiles']?['full_name'] as String? ?? '';
     return InspectionRecord(
       id: r['id']?.toString() ?? '',
       dateTime: dt,
@@ -53,6 +68,7 @@ class InspectionRecord {
       category: topCat,
       severity: topSev,
       inspectorId: scoutId.length >= 8 ? scoutId.substring(0, 8) : scoutId,
+      inspectorName: scoutName,
     );
   }
 }
@@ -138,7 +154,7 @@ class ReportStats {
     } else if (period == '3months') {
       labels = ['M1','M2','M3']; n = 3;
     } else {
-      labels = AppStrings.of(lang).chartLabelsWeek; n = 7;
+      labels = AppStrings.of(lang).chartLabelsWeekShort; n = 7;
     }
 
     final d = List<double>.filled(n, 0.0);
@@ -214,7 +230,7 @@ Future<List<InspectionRecord>> fetchInspectionRecords(
   String lang,
 ) async {
   var q = db.from('inspection_reports').select('''
-    id, submitted_at, started_at, variety_name, greenhouse_id, scout_id,
+    id, submitted_at, started_at, variety_name, greenhouse_id, scout_id, scout_name, scout_name,
     greenhouses!inner(code, farm_id),
     inspection_findings(category, severity)
   ''').gte('submitted_at', filter.since.toIso8601String());

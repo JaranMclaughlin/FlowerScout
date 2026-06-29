@@ -247,6 +247,10 @@ class AppStrings {
     ? ['Jumatatu','Jumanne','Jumatano','Alhamisi','Ijumaa','Jumamosi','Jumapili']
     : ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
 
+  List<String> get chartLabelsWeekShort => languageCode=='sw'
+    ? ['Jum','Jum','Jua','Alh','Iju','Jums','Jmap']
+    : ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
   // Full day names
   List<String> get weekdaysFull => languageCode=='sw'
     ? ['Jumatatu','Jumanne','Jumatano','Alhamisi','Ijumaa','Jumamosi','Jumapili']
@@ -309,6 +313,14 @@ class AppStrings {
   String get weeklyDescFull    => _t('Every Monday 7 AM – farm health digest', 'Kila Jumatatu saa 1 asubuhi – muhtasari wa afya ya shamba');
   String get showHeatmapDesc   => _t('Auto-display scouting heatmap when opening Maps', 'Onyesha ramani ya ukaguzi moja kwa moja unapofungua Ramani');
 
+  // -- Offline sync --
+  String get offlineQueuedSingle  => _t('Report saved locally — will sync when online', 'Ripoti imehifadhiwa — itasawazishwa mtandaoni');
+  String get offlineQueuedPlural  => _t('reports queued — will sync when online', 'ripoti zimehifadhiwa — zitasawazishwa mtandaoni');
+  String get offlineSyncedSingle  => _t('queued report synced', 'ripoti iliyohifadhiwa imesawazishwa');
+  String get offlineSyncedPlural  => _t('queued reports synced', 'ripoti zilizohifadhiwa zimesawazishwa');
+  String get offlineDeadLetter    => _t('could not sync — contact admin', 'haikuweza kusawazishwa — wasiliana na msimamizi');
+  String get offlineNoConn        => _t('No connection', 'Hakuna mtandao');
+
   String _t(String en, String sw) => languageCode == 'sw' ? sw : en;
 
   // ── Reports extra ────────────────────────────────────────────────────────
@@ -326,5 +338,33 @@ class AppStrings {
   String get waterStressShort=> _t('Water Stress','Msongo wa Maji');
   String get openingInspect  => _t('Opening inspection...','Inafungua ukaguzi...');
   String get signOutQ        => _t('Sign out?','Toka?');
+
+  // -- Location permission --
+  String get locationBlocked    => _t('Location blocked',       'Eneo limezuiwa');
+  String get allowLocationAccess=> _t('Allow location access',  'Ruhusu ufikiaji wa eneo');
+  String get recordsTrail       => _t('Records your walking trail across the farm', 'Inarekodia njia yako ya kutembea shambani');
+  String get tracksZones        => _t('Tracks which farm zones are covered or missed', 'Inafuatilia maeneo ya shamba yaliyofunikwa au kukosekana');
+  String get powersAnalytics    => _t('Powers distance and coverage analytics', 'Inasaidia uchambuzi wa umbali na ufunikaji');
+  String get allowWhileUsing    => _t('Allow while using app',  'Ruhusu wakati wa kutumia programu');
+  String get notNow             => _t('Not now',                'Si sasa');
+
+  // -- Topbar / notifications --
+  String get justNow            => _t('Just now',               'Sasa hivi');
+  String get partlyCloudy       => _t('Partly Cloudy',          'Mawingu kidogo');
+  String get feelsLike          => _t('Feels like',             'Inahisi kama');
+  String get highSeverityAlert  => _t('High Severity Alert',    'Tahadhari ya Ukali Mkubwa');
+  String get pestOutbreak       => _t('Potential pest outbreak detected', 'Mlipuko wa wadudu unaowezekana umegunduliwa');
+  String get inspectionDue      => _t('Inspection Due',         'Ukaguzi Unastahili');
+  String get reportReady        => _t('Report Ready',           'Ripoti Iko Tayari');
+  String get weeklySummaryReady => _t('Weekly scouting summary is ready to view', 'Muhtasari wa ukaguzi wa kila wiki uko tayari kutazamwa');
+  String get irrigationAlert    => _t('Irrigation Alert',       'Tahadhari ya Umwagiliaji');
+  String get markAllRead        => _t('Mark all read',          'Weka yote kama imesomwa');
+  String get allCaughtUp        => _t('All caught up!',         'Umesoma yote!');
+  String get noNewNotifications => _t('No new notifications',   'Hakuna arifa mpya');
+
+  // -- Chart labels full --
+  List<String> get chartLabels30DaysFull => languageCode=='sw'
+    ? ['Wiki 1','Wiki 2','Wiki 3','Wiki 4','Wiki 5']
+    : ['Week 1','Week 2','Week 3','Week 4','Week 5'];
 
 }

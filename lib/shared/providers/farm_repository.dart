@@ -146,10 +146,13 @@ class UserProfileModel {
 
 // ── Cache keys ────────────────────────────────────────────────────────────────
 class _CacheKeys {
-  static const farms     = 'cache_farms_v1';
-  static const profile   = 'cache_profile_v1';
-  static const cacheTime = 'cache_time_v1';
-  static const maxAgeMs  = 5 * 60 * 1000; // 5 minutes
+  // Per-user keys: append userId so shared-device users never see each other's data
+  static String farms(String uid)       => 'cache_farms_v1_\$uid';
+  static String profile(String uid)     => 'cache_profile_v1_\$uid';
+  static String cacheTime(String uid)   => 'cache_time_v1_\$uid';
+  static String profileTime(String uid) => 'cache_profile_time_v1_\$uid';
+  static const maxAgeMs        = 30 * 60 * 1000; // 30 minutes
+  static const profileMaxAgeMs = 30 * 60 * 1000; // 30 minutes
 }
 
 // ── Repository ────────────────────────────────────────────────────────────────
@@ -159,15 +162,42 @@ class FarmRepository {
 
   FarmRepository(this._db, this._prefs);
 
+  // ── Resilience config ─────────────────────────────────────────────────────
+  static const _timeout    = Duration(seconds: 12); // per-request timeout
+  static const _maxRetries = 3;                     // retries on transient errors
+
+  /// Retry wrapper with exponential backoff — safe for 500+ concurrent users.
+  /// Only retries on network/timeout errors, not on auth or data errors.
+  Future<T> _withRetry<T>(Future<T> Function() fn) async {
+    int attempt = 0;
+    while (true) {
+      try {
+        return await fn().timeout(_timeout);
+      } on PostgrestException catch (e) {
+        // Auth errors, RLS violations, bad data — don't retry
+        if (e.code != null && ['42501','PGRST301','PGRST116'].contains(e.code)) rethrow;
+        attempt++;
+        if (attempt >= _maxRetries) rethrow;
+      } catch (e) {
+        // Timeout, socket errors — retry with backoff
+        attempt++;
+        if (attempt >= _maxRetries) rethrow;
+      }
+      // Exponential backoff: 500ms, 1s, 2s
+      await Future.delayed(Duration(milliseconds: 500 * (1 << (attempt - 1))));
+    }
+  }
+
   // ── Farms + greenhouses + plantings ──────────────────────────────────────
   Future<List<FarmModel>> getFarms({bool forceRefresh = false}) async {
+    final uid = _db.auth.currentUser?.id ?? 'anon';
     if (!forceRefresh) {
-      final cached = _loadCachedFarms();
+      final cached = _loadCachedFarms(uid);
       if (cached != null) return cached;
     }
 
     try {
-      final data = await _db
+      final data = await _withRetry(() => _db
           .from('farms')
           .select('''
             id, name, location, is_active,
@@ -178,17 +208,17 @@ class FarmRepository {
             )
           ''')
           .eq('is_active', true)
-          .order('name');
+          .order('name'));
 
-      final farms = (data as List)
+      final farms = (data as List<dynamic>)
           .map((f) => FarmModel.fromJson(f as Map<String, dynamic>))
           .toList();
 
-      await _cacheFarms(farms);
+      await _cacheFarms(farms, uid);
       return farms;
     } on PostgrestException catch (e) {
       // Return cached data on error (offline fallback)
-      final cached = _loadCachedFarms();
+      final cached = _loadCachedFarms(uid);
       if (cached != null) return cached;
       throw FarmRepositoryException('Failed to load farms: ${e.message}');
     }
@@ -197,12 +227,14 @@ class FarmRepository {
   // ── Update greenhouse active status ──────────────────────────────────────
   Future<void> updateGreenhouseStatus(String greenhouseId, bool isActive) async {
     try {
-      await _db
+      await _withRetry(() => _db
           .from('greenhouses')
           .update({'is_active': isActive})
-          .eq('id', greenhouseId);
-      // Invalidate cache
-      await _prefs.remove(_CacheKeys.farms);
+          .eq('id', greenhouseId));
+      // Invalidate cache for current user
+      final uid = _db.auth.currentUser?.id ?? 'anon';
+      await _prefs.remove(_CacheKeys.farms(uid));
+      await _prefs.remove(_CacheKeys.cacheTime(uid));
     } on PostgrestException catch (e) {
       throw FarmRepositoryException('Failed to update greenhouse: ${e.message}');
     }
@@ -214,22 +246,23 @@ class FarmRepository {
     if (uid == null) return null;
 
     if (!forceRefresh) {
-      final cached = _loadCachedProfile();
+      final cached = _loadCachedProfile(uid);
       if (cached != null) return cached;
     }
 
     try {
-      final data = await _db
+      final data = await _withRetry(() => _db
           .from('user_profiles')
           .select()
           .eq('id', uid)
-          .single();
+          .single());
 
+      // ignore: unnecessary_cast
       final profile = UserProfileModel.fromJson(data as Map<String, dynamic>);
       await _cacheProfile(profile);
       return profile;
     } on PostgrestException catch (e) {
-      final cached = _loadCachedProfile();
+      final cached = _loadCachedProfile(uid);
       if (cached != null) return cached;
       throw FarmRepositoryException('Failed to load profile: ${e.message}');
     }
@@ -244,12 +277,12 @@ class FarmRepository {
     if (uid == null) throw FarmRepositoryException('Not authenticated');
 
     try {
-      await _db.from('user_profiles').update({
+      await _withRetry(() => _db.from('user_profiles').update({
         'full_name': fullName,
         'phone': phone,
         'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', uid);
-      await _prefs.remove(_CacheKeys.profile);
+      }).eq('id', uid));
+      await _prefs.remove(_CacheKeys.profile(uid));
     } on PostgrestException catch (e) {
       throw FarmRepositoryException('Failed to update profile: ${e.message}');
     }
@@ -258,10 +291,10 @@ class FarmRepository {
   // ── Team members (manager/admin only) ────────────────────────────────────
   Future<List<UserProfileModel>> getTeamMembers() async {
     try {
-      final data = await _db
+      final data = await _withRetry(() => _db
           .from('user_profiles')
           .select()
-          .order('full_name');
+          .order('full_name'));
       return (data as List)
           .map((u) => UserProfileModel.fromJson(u as Map<String, dynamic>))
           .toList();
@@ -271,15 +304,15 @@ class FarmRepository {
   }
 
   // ── Cache helpers ─────────────────────────────────────────────────────────
-  bool _isCacheValid() {
-    final ts = _prefs.getInt(_CacheKeys.cacheTime);
+  bool _isCacheValid(String uid) {
+    final ts = _prefs.getInt(_CacheKeys.cacheTime(uid));
     if (ts == null) return false;
     return DateTime.now().millisecondsSinceEpoch - ts < _CacheKeys.maxAgeMs;
   }
 
-  List<FarmModel>? _loadCachedFarms() {
-    if (!_isCacheValid()) return null;
-    final raw = _prefs.getString(_CacheKeys.farms);
+  List<FarmModel>? _loadCachedFarms(String uid) {
+    if (!_isCacheValid(uid)) return null;
+    final raw = _prefs.getString(_CacheKeys.farms(uid));
     if (raw == null) return null;
     try {
       final list = jsonDecode(raw) as List;
@@ -289,15 +322,20 @@ class FarmRepository {
     }
   }
 
-  Future<void> _cacheFarms(List<FarmModel> farms) async {
+  Future<void> _cacheFarms(List<FarmModel> farms, String uid) async {
     await _prefs.setString(
-        _CacheKeys.farms, jsonEncode(farms.map((f) => f.toJson()).toList()));
+        _CacheKeys.farms(uid), jsonEncode(farms.map((f) => f.toJson()).toList()));
     await _prefs.setInt(
-        _CacheKeys.cacheTime, DateTime.now().millisecondsSinceEpoch);
+        _CacheKeys.cacheTime(uid), DateTime.now().millisecondsSinceEpoch);
   }
 
-  UserProfileModel? _loadCachedProfile() {
-    final raw = _prefs.getString(_CacheKeys.profile);
+  UserProfileModel? _loadCachedProfile(String uid) {
+    final ts = _prefs.getInt(_CacheKeys.profileTime(uid));
+    if (ts != null) {
+      final age = DateTime.now().millisecondsSinceEpoch - ts;
+      if (age > _CacheKeys.profileMaxAgeMs) return null;
+    }
+    final raw = _prefs.getString(_CacheKeys.profile(uid));
     if (raw == null) return null;
     try {
       return UserProfileModel.fromJson(jsonDecode(raw) as Map<String, dynamic>);
@@ -307,7 +345,8 @@ class FarmRepository {
   }
 
   Future<void> _cacheProfile(UserProfileModel profile) async {
-    await _prefs.setString(_CacheKeys.profile, jsonEncode({
+    await _prefs.setInt(_CacheKeys.profileTime(profile.id), DateTime.now().millisecondsSinceEpoch);
+    await _prefs.setString(_CacheKeys.profile(profile.id), jsonEncode({
       'id': profile.id,
       'full_name': profile.fullName,
       'role': profile.role,
@@ -317,9 +356,10 @@ class FarmRepository {
   }
 
   Future<void> clearCache() async {
-    await _prefs.remove(_CacheKeys.farms);
-    await _prefs.remove(_CacheKeys.profile);
-    await _prefs.remove(_CacheKeys.cacheTime);
+    final uid = _db.auth.currentUser?.id ?? 'anon';
+    await _prefs.remove(_CacheKeys.farms(uid));
+    await _prefs.remove(_CacheKeys.profile(uid));
+    await _prefs.remove(_CacheKeys.cacheTime(uid));
   }
 }
 

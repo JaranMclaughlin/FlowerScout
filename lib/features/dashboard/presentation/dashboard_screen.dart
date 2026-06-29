@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/providers/locale_provider.dart';
 import '../../../shared/l10n/app_strings.dart';
@@ -7,6 +7,7 @@ import '../../../shared/theme/app_colors.dart';
 import '../../../shared/providers/farm_providers.dart';
 import '../../../shared/providers/farm_repository.dart';
 import '../../../shared/providers/shell_tab_provider.dart';
+import '../../../shared/providers/analytics_data.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -33,6 +34,10 @@ class DashboardScreen extends ConsumerWidget {
           data: (farms) {
             final stats    = _DashboardStats.fromFarms(farms);
             final userName = profileAsync.value?.fullName.split(' ').first;
+            final filter   = AnalyticsFilter(period: '7days');
+            final rptStats = ref.watch(reportStatsProvider(filter));
+            final critical = rptStats.value?.critical ?? 0;
+            final total    = rptStats.value?.total ?? 0;
             return SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: EdgeInsets.all(pad),
@@ -44,7 +49,7 @@ class DashboardScreen extends ConsumerWidget {
                     children: [
                       _Greeting(name: userName),
                       const SizedBox(height: AppSizes.spaceLg),
-                      _HealthCard(stats: stats, s: s),
+                      _HealthCard(stats: stats, s: s, criticalFindings: critical, totalFindings: total),
                       const SizedBox(height: AppSizes.space2xl),
                       Text(s.farmOverview, style: AppTextStyles.heading),
                       const SizedBox(height: AppSizes.spaceMd),
@@ -267,11 +272,11 @@ class _DashboardStats {
 }
 
 // ── Greeting ─────────────────────────────────────────────────────────────────
-class _Greeting extends StatelessWidget {
+class _Greeting extends ConsumerWidget {
   final String? name;
   const _Greeting({this.name});
 
-  String _tod() {
+  String _tod(AppStrings s) {
     final h = DateTime.now().hour;
     if (h < 12) return s.goodMorning;
     if (h < 17) return s.goodAfternoon;
@@ -279,45 +284,90 @@ class _Greeting extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Text(
-    name != null && name!.isNotEmpty ? '${_tod()}, $name' : _tod(),
-    style: AppTextStyles.displayLarge,
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    return Text(
+      name != null && name!.isNotEmpty ? '${_tod(s)}, $name' : _tod(s),
+      style: AppTextStyles.displayLarge,
+    );
+  }
 }
 
 // ── Health card ──────────────────────────────────────────────────────────────
 class _HealthCard extends StatelessWidget {
   final AppStrings s;
   final _DashboardStats stats;
-  const _HealthCard({required this.stats, required this.s});
+  final int criticalFindings;
+  final int totalFindings;
+  const _HealthCard({
+    required this.stats, required this.s,
+    this.criticalFindings = 0, this.totalFindings = 0,
+  });
+
+  /// Composite score:
+  /// 60% greenhouse activation + 40% finding severity penalty
+  int get healthScore {
+    if (stats.totalGreenhouses == 0) return 0;
+    final activePct = (stats.activeGreenhouses / stats.totalGreenhouses) * 60;
+    // Severity penalty: each critical finding costs 4pts, capped at 40
+    final penalty = (criticalFindings * 4).clamp(0, 40);
+    return (activePct + (40 - penalty)).round().clamp(0, 100);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final score = stats.healthScore;
+    final score = healthScore;
     final label = score >= 80 ? s.excellentCond
         : score >= 60 ? s.goodCond
         : score >= 40 ? s.needsAttention
         : s.criticalAction;
+    final gradientColors = score >= 80
+        ? [AppColors.forest, AppColors.canopy, AppColors.leaf]
+        : score >= 60
+            ? [AppColors.canopy, AppColors.leaf, const Color(0xFF52B788)]
+            : score >= 40
+                ? [const Color(0xFF7A5C00), const Color(0xFF9A7500), AppColors.warning]
+                : [const Color(0xFF7A1F1F), const Color(0xFFB53030), AppColors.critical];
     return Container(
       width: double.infinity,
       padding: AppSizes.cardPaddingLg,
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.forest, AppColors.canopy, AppColors.leaf],
+        gradient: LinearGradient(
+          colors: gradientColors,
           begin: Alignment.topLeft, end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(AppSizes.radiusXl),
-        boxShadow: [BoxShadow(color: AppColors.canopy.withValues(alpha: 0.30),
+        boxShadow: [BoxShadow(color: gradientColors[0].withValues(alpha: 0.30),
             blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(s.ghActivation,
             style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 13)),
         const SizedBox(height: AppSizes.spaceSm),
-        Text('$score%', style: const TextStyle(color: Colors.white,
-            fontSize: 44, fontWeight: FontWeight.bold, height: 1)),
+        Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+          Text('$score%', style: const TextStyle(color: Colors.white,
+              fontSize: 44, fontWeight: FontWeight.bold, height: 1)),
+          const SizedBox(width: 12),
+          if (criticalFindings > 0)
+            Container(
+              margin: const EdgeInsets.only(bottom: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.20),
+                borderRadius: BorderRadius.circular(AppSizes.radiusPill),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white, size: 12),
+                const SizedBox(width: 4),
+                Text('$criticalFindings critical (7d)',
+                    style: const TextStyle(color: Colors.white, fontSize: 11,
+                        fontWeight: FontWeight.w600)),
+              ]),
+            ),
+        ]),
         const SizedBox(height: AppSizes.spaceSm),
-        Text('$label · ${stats.activeGreenhouses}/${stats.totalGreenhouses} ${s.activeGh}',
+        Text('$label · ${stats.activeGreenhouses}/${stats.totalGreenhouses} ${s.activeGh}'
+            '${totalFindings > 0 ? " · $totalFindings inspections" : ""}',
             style: const TextStyle(color: Colors.white, fontSize: 13)),
       ]),
     );
@@ -542,19 +592,22 @@ class _EmptyFarmsCard extends StatelessWidget {
   );
 }
 
-class _ErrorState extends StatelessWidget {
+class _ErrorState extends ConsumerWidget {
   final String message;
   const _ErrorState({required this.message});
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(padding: const EdgeInsets.all(24),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.error_outline_rounded, size: 40, color: AppColors.critical),
-        const SizedBox(height: AppSizes.spaceMd),
-        Text(s.couldNotLoad, style: AppTextStyles.title),
-        const SizedBox(height: 4),
-        Text(message, style: AppTextStyles.caption, textAlign: TextAlign.center),
-      ]),
-    ),
-  );
+  Widget build(BuildContext context, WidgetRef ref) {
+    final s = ref.watch(stringsProvider);
+    return Center(
+      child: Padding(padding: const EdgeInsets.all(24),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.error_outline_rounded, size: 40, color: AppColors.critical),
+          const SizedBox(height: AppSizes.spaceMd),
+          Text(s.couldNotLoad, style: AppTextStyles.title),
+          const SizedBox(height: 4),
+          Text(message, style: AppTextStyles.caption, textAlign: TextAlign.center),
+        ]),
+      ),
+    );
+  }
 }

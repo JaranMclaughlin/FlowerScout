@@ -1,0 +1,336 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+// ── Models ────────────────────────────────────────────────────────────────────
+
+class FarmModel {
+  final String id;
+  final String name;
+  final String? location;
+  final bool isActive;
+  final List<GreenhouseModel> greenhouses;
+
+  const FarmModel({
+    required this.id,
+    required this.name,
+    this.location,
+    required this.isActive,
+    this.greenhouses = const [],
+  });
+
+  factory FarmModel.fromJson(Map<String, dynamic> j) => FarmModel(
+        id: j['id'] as String,
+        name: j['name'] as String,
+        location: j['location'] as String?,
+        isActive: j['is_active'] as bool? ?? true,
+        greenhouses: (j['greenhouses'] as List<dynamic>? ?? [])
+            .map((g) => GreenhouseModel.fromJson(g as Map<String, dynamic>))
+            .toList(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'location': location,
+        'is_active': isActive,
+        'greenhouses': greenhouses.map((g) => g.toJson()).toList(),
+      };
+}
+
+class GreenhouseModel {
+  final String id;
+  final String farmId;
+  final String code;
+  final String medium;
+  final bool isActive;
+  final List<PlantingModel> plantings;
+
+  const GreenhouseModel({
+    required this.id,
+    required this.farmId,
+    required this.code,
+    required this.medium,
+    required this.isActive,
+    this.plantings = const [],
+  });
+
+  factory GreenhouseModel.fromJson(Map<String, dynamic> j) => GreenhouseModel(
+        id: j['id'] as String,
+        farmId: j['farm_id'] as String,
+        code: j['code'] as String,
+        medium: j['medium'] as String? ?? 'SOIL',
+        isActive: j['is_active'] as bool? ?? true,
+        plantings: (j['plantings'] as List<dynamic>? ?? [])
+            .map((p) => PlantingModel.fromJson(p as Map<String, dynamic>))
+            .toList(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'farm_id': farmId,
+        'code': code,
+        'medium': medium,
+        'is_active': isActive,
+        'plantings': plantings.map((p) => p.toJson()).toList(),
+      };
+
+  List<String> get varietyNames => plantings.map((p) => p.varietyName).toSet().toList();
+}
+
+class PlantingModel {
+  final String id;
+  final String greenhouseId;
+  final String varietyName;
+  final String productType;
+  final DateTime? plantingDate;
+  final int? numberOfPlants;
+  final double? areaM2;
+
+  const PlantingModel({
+    required this.id,
+    required this.greenhouseId,
+    required this.varietyName,
+    required this.productType,
+    this.plantingDate,
+    this.numberOfPlants,
+    this.areaM2,
+  });
+
+  factory PlantingModel.fromJson(Map<String, dynamic> j) => PlantingModel(
+        id: j['id'] as String,
+        greenhouseId: j['greenhouse_id'] as String,
+        varietyName: j['variety_name'] as String,
+        productType: j['product_type'] as String,
+        plantingDate: j['planting_date'] != null
+            ? DateTime.tryParse(j['planting_date'] as String)
+            : null,
+        numberOfPlants: j['number_of_plants'] as int?,
+        areaM2: (j['area_m2'] as num?)?.toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'greenhouse_id': greenhouseId,
+        'variety_name': varietyName,
+        'product_type': productType,
+        'planting_date': plantingDate?.toIso8601String(),
+        'number_of_plants': numberOfPlants,
+        'area_m2': areaM2,
+      };
+}
+
+class UserProfileModel {
+  final String id;
+  final String fullName;
+  final String role;
+  final String? phone;
+  final String? avatarUrl;
+
+  const UserProfileModel({
+    required this.id,
+    required this.fullName,
+    required this.role,
+    this.phone,
+    this.avatarUrl,
+  });
+
+  factory UserProfileModel.fromJson(Map<String, dynamic> j) => UserProfileModel(
+        id: j['id'] as String,
+        fullName: j['full_name'] as String,
+        role: j['role'] as String,
+        phone: j['phone'] as String?,
+        avatarUrl: j['avatar_url'] as String?,
+      );
+}
+
+// ── Cache keys ────────────────────────────────────────────────────────────────
+class _CacheKeys {
+  // Per-user keys: append userId so shared-device users never see each other's data
+  static String farms(String uid)     => 'cache_farms_v1_$uid';
+  static String profile(String uid)   => 'cache_profile_v1_$uid';
+  static String cacheTime(String uid) => 'cache_time_v1_$uid';
+  static const maxAgeMs = 5 * 60 * 1000; // 5 minutes
+}
+
+// ── Repository ────────────────────────────────────────────────────────────────
+class FarmRepository {
+  final SupabaseClient _db;
+  final SharedPreferences _prefs;
+
+  FarmRepository(this._db, this._prefs);
+
+  // ── Farms + greenhouses + plantings ──────────────────────────────────────
+  Future<List<FarmModel>> getFarms({bool forceRefresh = false}) async {
+    final uid = _db.auth.currentUser?.id ?? 'anon';
+    if (!forceRefresh) {
+      final cached = _loadCachedFarms(uid);
+      if (cached != null) return cached;
+    }
+
+    try {
+      final data = await _db
+          .from('farms')
+          .select('''
+            id, name, location, is_active,
+            greenhouses (
+              id, farm_id, code, medium, is_active,
+              plantings ( id, greenhouse_id, variety_name, product_type,
+                          planting_date, number_of_plants, area_m2 )
+            )
+          ''')
+          .eq('is_active', true)
+          .order('name');
+
+      final farms = (data as List)
+          .map((f) => FarmModel.fromJson(f as Map<String, dynamic>))
+          .toList();
+
+      await _cacheFarms(farms, uid);
+      return farms;
+    } on PostgrestException catch (e) {
+      // Return cached data on error (offline fallback)
+      final cached = _loadCachedFarms(uid);
+      if (cached != null) return cached;
+      throw FarmRepositoryException('Failed to load farms: ${e.message}');
+    }
+  }
+
+  // ── Update greenhouse active status ──────────────────────────────────────
+  Future<void> updateGreenhouseStatus(String greenhouseId, bool isActive) async {
+    try {
+      await _db
+          .from('greenhouses')
+          .update({'is_active': isActive})
+          .eq('id', greenhouseId);
+      // Invalidate cache for current user
+      final uid = _db.auth.currentUser?.id ?? 'anon';
+      await _prefs.remove(_CacheKeys.farms(uid));
+      await _prefs.remove(_CacheKeys.cacheTime(uid));
+    } on PostgrestException catch (e) {
+      throw FarmRepositoryException('Failed to update greenhouse: ${e.message}');
+    }
+  }
+
+  // ── Current user profile ─────────────────────────────────────────────────
+  Future<UserProfileModel?> getMyProfile({bool forceRefresh = false}) async {
+    final uid = _db.auth.currentUser?.id;
+    if (uid == null) return null;
+
+    if (!forceRefresh) {
+      final cached = _loadCachedProfile(uid);
+      if (cached != null) return cached;
+    }
+
+    try {
+      final data = await _db
+          .from('user_profiles')
+          .select()
+          .eq('id', uid)
+          .single();
+
+      final profile = UserProfileModel.fromJson(data as Map<String, dynamic>);
+      await _cacheProfile(profile);
+      return profile;
+    } on PostgrestException catch (e) {
+      final cached = _loadCachedProfile(uid);
+      if (cached != null) return cached;
+      throw FarmRepositoryException('Failed to load profile: \${e.message}');
+    }
+  }
+
+  // ── Update user profile ───────────────────────────────────────────────────
+  Future<void> updateProfile({
+    required String fullName,
+    String? phone,
+  }) async {
+    final uid = _db.auth.currentUser?.id;
+    if (uid == null) throw FarmRepositoryException('Not authenticated');
+
+    try {
+      await _db.from('user_profiles').update({
+        'full_name': fullName,
+        'phone': phone,
+        'updated_at': DateTime.now().toIso8601String(),
+      }).eq('id', uid);
+      await _prefs.remove(_CacheKeys.profile(uid));
+    } on PostgrestException catch (e) {
+      throw FarmRepositoryException('Failed to update profile: ${e.message}');
+    }
+  }
+
+  // ── Team members (manager/admin only) ────────────────────────────────────
+  Future<List<UserProfileModel>> getTeamMembers() async {
+    try {
+      final data = await _db
+          .from('user_profiles')
+          .select()
+          .order('full_name');
+      return (data as List)
+          .map((u) => UserProfileModel.fromJson(u as Map<String, dynamic>))
+          .toList();
+    } on PostgrestException catch (e) {
+      throw FarmRepositoryException('Failed to load team: ${e.message}');
+    }
+  }
+
+  // ── Cache helpers ─────────────────────────────────────────────────────────
+  bool _isCacheValid(String uid) {
+    final ts = _prefs.getInt(_CacheKeys.cacheTime(uid));
+    if (ts == null) return false;
+    return DateTime.now().millisecondsSinceEpoch - ts < _CacheKeys.maxAgeMs;
+  }
+
+  List<FarmModel>? _loadCachedFarms(String uid) {
+    if (!_isCacheValid(uid)) return null;
+    final raw = _prefs.getString(_CacheKeys.farms(uid));
+    if (raw == null) return null;
+    try {
+      final list = jsonDecode(raw) as List;
+      return list.map((f) => FarmModel.fromJson(f as Map<String, dynamic>)).toList();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _cacheFarms(List<FarmModel> farms, String uid) async {
+    await _prefs.setString(
+        _CacheKeys.farms(uid), jsonEncode(farms.map((f) => f.toJson()).toList()));
+    await _prefs.setInt(
+        _CacheKeys.cacheTime(uid), DateTime.now().millisecondsSinceEpoch);
+  }
+
+  UserProfileModel? _loadCachedProfile(String uid) {
+    final raw = _prefs.getString(_CacheKeys.profile(uid));
+    if (raw == null) return null;
+    try {
+      return UserProfileModel.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _cacheProfile(UserProfileModel profile) async {
+    await _prefs.setString(_CacheKeys.profile(profile.id), jsonEncode({
+      'id': profile.id,
+      'full_name': profile.fullName,
+      'role': profile.role,
+      'phone': profile.phone,
+      'avatar_url': profile.avatarUrl,
+    }));
+  }
+
+  Future<void> clearCache() async {
+    final uid = _db.auth.currentUser?.id ?? 'anon';
+    await _prefs.remove(_CacheKeys.farms(uid));
+    await _prefs.remove(_CacheKeys.profile(uid));
+    await _prefs.remove(_CacheKeys.cacheTime(uid));
+  }
+}
+
+class FarmRepositoryException implements Exception {
+  final String message;
+  const FarmRepositoryException(this.message);
+  @override
+  String toString() => 'FarmRepositoryException: $message';
+}

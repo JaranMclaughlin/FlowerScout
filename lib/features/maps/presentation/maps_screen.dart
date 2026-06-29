@@ -4,11 +4,9 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/theme/app_colors.dart';
-import '../../../shared/trail/data/trail_repository.dart';
 import '../../../shared/trail/providers/trail_providers.dart';
 import '../../../shared/providers/farm_providers.dart';
 import '../../../shared/trail/models/scout_trail.dart';
-import '../../../core/session/user_session.dart';
 import '../../../shared/l10n/app_strings.dart';
 import '../../../shared/providers/locale_provider.dart';
 
@@ -32,12 +30,12 @@ double _calcDistance(List<LatLng> pts) {
 }
 
 String _fmtDist(double m) =>
-    m < 1000 ? m.toStringAsFixed(0) + ' m' : (m / 1000).toStringAsFixed(2) + ' km';
+    m < 1000 ? '${m.toStringAsFixed(0)} m' : '${(m / 1000).toStringAsFixed(2)} km';
 
 String _fmtDur(Duration d) =>
-    d.inHours.toString().padLeft(2, '0') + ':' +
-    (d.inMinutes % 60).toString().padLeft(2, '0') + ':' +
-    (d.inSeconds % 60).toString().padLeft(2, '0');
+    '${d.inHours.toString().padLeft(2, '0')}:'
+    '${(d.inMinutes % 60).toString().padLeft(2, '0')}:'
+    '${(d.inSeconds % 60).toString().padLeft(2, '0')}';
 
 class MapsScreen extends ConsumerWidget {
   const MapsScreen({super.key});
@@ -141,86 +139,157 @@ class _ManagerMapsViewState extends ConsumerState<_ManagerMapsView> {
       );
 }
 
-class _LiveTrailsList extends ConsumerWidget {
+class _LiveTrailsList extends ConsumerStatefulWidget {
   const _LiveTrailsList();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_LiveTrailsList> createState() => _LiveTrailsListState();
+}
+
+class _LiveTrailsListState extends ConsumerState<_LiveTrailsList> {
+  final Set<String> _ending = {};
+
+  @override
+  Widget build(BuildContext context) {
+    final s = AppStrings.of(ref.watch(localeProvider));
     final trailsAsync = ref.watch(activeTrailsProvider);
     return trailsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-      error: (e, _) => const Center(child: Text(s.couldNotLoadLive, style: TextStyle(color: _muted))),
+      error: (e, _) => Center(child: Text(s.couldNotLoadLive, style: const TextStyle(color: _muted))),
       data: (trails) {
-        if (trails.isEmpty) {
-          return const Center(
+        final visible = trails.where((t) => !_ending.contains(t.id)).toList();
+        if (visible.isEmpty) {
+          return Center(
             child: Padding(
-              padding: EdgeInsets.all(24),
+              padding: const EdgeInsets.all(24),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.route_rounded, color: _muted, size: 36),
-                SizedBox(height: 12),
-                Text(s.noScoutsOut,
-                    style: TextStyle(color: _muted, fontSize: 13)),
+                const Icon(Icons.route_rounded, color: _muted, size: 36),
+                const SizedBox(height: 12),
+                Text(s.noScoutsOut, style: const TextStyle(color: _muted, fontSize: 13)),
               ]),
             ),
           );
         }
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          itemCount: trails.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) => _TrailTile(trail: trails[i], isLive: true),
+          itemCount: visible.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (ctx, i) {
+            final trail = visible[i];
+            return Dismissible(
+              key: Key(trail.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFA32D2D),
+                  borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.stop_circle_outlined, color: Colors.white, size: 24),
+              ),
+              confirmDismiss: (_) async {
+                return await showDialog<bool>(
+                  context: ctx,
+                  builder: (dlgCtx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: const Text('End live trail?'),
+                    content: const Text('This will stop the trail and move it to history.'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dlgCtx).pop(false),
+                        child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.of(dlgCtx).pop(true),
+                        child: const Text('End trail',
+                            style: TextStyle(color: Color(0xFFA32D2D)))),
+                    ],
+                  ),
+                ) ?? false;
+              },
+              onDismissed: (_) async {
+                setState(() => _ending.add(trail.id));
+                try {
+                  final repo = ref.read(trailRepositoryProvider);
+                  await repo.endTrail(trail.id);
+                } catch (_) {}
+                ref.invalidate(activeTrailsProvider);
+              },
+              child: _TrailTile(trail: trail, isLive: true),
+            );
+          },
         );
       },
     );
   }
 }
 
-class _TrailHistoryList extends ConsumerWidget {
+class _TrailHistoryList extends ConsumerStatefulWidget {
   const _TrailHistoryList();
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_TrailHistoryList> createState() => _TrailHistoryListState();
+}
+
+class _TrailHistoryListState extends ConsumerState<_TrailHistoryList> {
+  final Set<String> _deleting = {};
+
+  @override
+  Widget build(BuildContext context) {
     final trailsAsync = ref.watch(trailHistoryProvider);
     return trailsAsync.when(
       loading: () => const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
       error: (e, _) => Center(child: Text(AppStrings.of(ref.watch(localeProvider)).couldNotLoadHistory, style: const TextStyle(color: _muted))),
       data: (trails) {
-        if (trails.isEmpty) {
-          return Center(child: Text(AppStrings.of(ref.watch(localeProvider)).noCompletedTrails, style: const TextStyle(color: _muted, fontSize: 13)));
+        final visible = trails.where((t) => !_deleting.contains(t.id)).toList();
+        if (visible.isEmpty) {
+          return Center(child: Text(AppStrings.of(ref.watch(localeProvider)).noCompletedTrails,
+              style: const TextStyle(color: _muted, fontSize: 13)));
         }
         return ListView.separated(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          itemCount: trails.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 10),
-          itemBuilder: (_, i) => Dismissible(
-            key: Key(trails[i].id),
-            direction: DismissDirection.endToStart,
-            background: Container(
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              decoration: BoxDecoration(color: const Color(0xFFA32D2D), borderRadius: BorderRadius.circular(14)),
-              child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
-            ),
-            confirmDismiss: (_) async {
-              return await showDialog<bool>(
-                context: context,
-                builder: (_) => AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  title: Text(AppStrings.of(ref.watch(localeProvider)).deleteTrail),
-                  content: Text(AppStrings.of(ref.watch(localeProvider)).deleteTrailMsg),
-                  actions: [
-                    TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                    TextButton(onPressed: () => Navigator.pop(context, true),
-                        child: const Text('Delete', style: TextStyle(color: Color(0xFFA32D2D)))),
-                  ],
-                ),
-              ) ?? false;
-            },
-            onDismissed: (_) async {
-              final repo = ref.read(trailRepositoryProvider);
-              await repo.deleteTrail(trails[i].id);
-              ref.invalidate(trailHistoryProvider);
-            },
-            child: _TrailTile(trail: trails[i], isLive: false),
-          ),
+          itemCount: visible.length,
+          separatorBuilder: (_, _) => const SizedBox(height: 10),
+          itemBuilder: (ctx, i) {
+            final trail = visible[i];
+            return Dismissible(
+              key: Key(trail.id),
+              direction: DismissDirection.endToStart,
+              background: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFA32D2D),
+                  borderRadius: BorderRadius.circular(14)),
+                child: const Icon(Icons.delete_outline_rounded, color: Colors.white, size: 24),
+              ),
+              confirmDismiss: (_) async {
+                return await showDialog<bool>(
+                  context: ctx,
+                  builder: (dlgCtx) => AlertDialog(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    title: Text(AppStrings.of(ref.watch(localeProvider)).deleteTrail),
+                    content: Text(AppStrings.of(ref.watch(localeProvider)).deleteTrailMsg),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(dlgCtx).pop(false),
+                        child: const Text('Cancel')),
+                      TextButton(
+                        onPressed: () => Navigator.of(dlgCtx).pop(true),
+                        child: const Text('Delete',
+                            style: TextStyle(color: Color(0xFFA32D2D)))),
+                    ],
+                  ),
+                ) ?? false;
+              },
+              onDismissed: (_) async {
+                setState(() => _deleting.add(trail.id));
+                try {
+                  final repo = ref.read(trailRepositoryProvider);
+                  await repo.deleteTrail(trail.id);
+                } catch (_) {}
+                ref.invalidate(trailHistoryProvider);
+              },
+              child: _TrailTile(trail: trail, isLive: false),
+            );
+          },
         );
       },
     );
@@ -248,8 +317,8 @@ class _TrailTile extends ConsumerWidget {
         break;
       }
     }
-    final farmText = farmName != null ? (ghCode != null ? farmName + ' - ' + ghCode : farmName) : null;
-    final statusText = isLive ? s.liveTrail + ' - ' : s.history + ' - ';
+    final farmText = farmName != null ? (ghCode != null ? '\$farmName - \$ghCode' : farmName) : null;
+    final statusText = isLive ? '${s.liveTrail} - ' : '${s.history} - ';
 
     return GestureDetector(
       onTap: () => Navigator.push(context, MaterialPageRoute(
@@ -277,6 +346,21 @@ class _TrailTile extends ConsumerWidget {
                   Text(farmText, style: const TextStyle(fontSize: 12, color: _green, fontWeight: FontWeight.w600)),
                 ])),
             Text(statusText + _fmtDur(duration), style: const TextStyle(fontSize: 12, color: _muted)),
+            if (trail.points.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Row(children: [
+                const Icon(Icons.route_rounded, size: 11, color: _muted),
+                const SizedBox(width: 3),
+                Text(
+                  _fmtDist(_calcDistance(trail.points.map((p) => LatLng(p.lat, p.lng)).toList())),
+                  style: const TextStyle(fontSize: 11, color: _muted),
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.location_on_rounded, size: 11, color: _muted),
+                const SizedBox(width: 3),
+                Text('${trail.points.length} pts', style: const TextStyle(fontSize: 11, color: _muted)),
+              ]),
+            ],
           ])),
           const Icon(Icons.chevron_right_rounded, color: _muted),
         ]),
@@ -334,6 +418,7 @@ class _TrailPlaybackScreenState extends ConsumerState<_TrailPlaybackScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(ref.watch(localeProvider));
     final trailAsync = ref.watch(trailByIdProvider(widget.trailId));
     return Scaffold(
       backgroundColor: _bg,
@@ -343,7 +428,7 @@ class _TrailPlaybackScreenState extends ConsumerState<_TrailPlaybackScreen> {
       ),
       body: trailAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(color: _green, strokeWidth: 2)),
-        error: (e, _) => const Center(child: Text(s.couldNotLoadTrail, style: TextStyle(color: _muted))),
+        error: (e, _) => Center(child: Text(s.couldNotLoadTrail, style: const TextStyle(color: _muted))),
         data: (trail) {
           final pts = trail.points.map((p) => LatLng(p.lat, p.lng)).toList();
           if (pts.isEmpty) {
@@ -382,7 +467,7 @@ class _TrailPlaybackScreenState extends ConsumerState<_TrailPlaybackScreen> {
                 Row(children: [
                   Text(_fmtDist(distSoFar), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                   const Spacer(),
-                  Text((idx + 1).toString() + ' / ' + pts.length.toString() + ' pts',
+                  Text('${idx + 1} / ${pts.length} pts',
                       style: const TextStyle(color: _muted, fontSize: 12)),
                 ]),
                 Slider(value: idx.toDouble(), min: 0, max: (pts.length - 1).toDouble(),
@@ -401,3 +486,9 @@ class _TrailPlaybackScreenState extends ConsumerState<_TrailPlaybackScreen> {
     );
   }
 }
+
+
+
+
+
+

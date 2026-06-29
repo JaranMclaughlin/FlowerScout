@@ -1,0 +1,116 @@
+
+=== ERROR_HANDLING (15) ===
+main.dart:81: } catch (_) {}
+location_permission_screen.dart:49: } catch (_) {
+login_screen.dart:56: } on AuthException catch (e) {
+login_screen.dart:58: } catch (_) {
+scouting_screen.dart:127: } catch (_) {}
+scouting_screen.dart:250: } catch (e) {
+topbar_widgets.dart:107: } catch (_) {}
+farm_repository.dart:189: } on PostgrestException catch (e) {
+farm_repository.dart:206: } on PostgrestException catch (e) {
+farm_repository.dart:231: } on PostgrestException catch (e) {
+farm_repository.dart:253: } on PostgrestException catch (e) {
+farm_repository.dart:268: } on PostgrestException catch (e) {
+farm_repository.dart:287: } catch (_) {
+farm_repository.dart:304: } catch (_) {
+trail_tracking_controller.dart:89: } catch (_) {
+
+=== EMPTY_HANDLERS (30) ===
+analytics_screen.dart:261: onTap: () => setState(() => _chartType = t),
+location_permission_screen.dart:78: onPressed: () {
+location_permission_screen.dart:86: onPressed: () async {
+login_screen.dart:85: onTap: () => ref.read(localeProvider.notifier).setLanguage('en')),
+login_screen.dart:88: onTap: () => ref.read(localeProvider.notifier).setLanguage('sw')),
+login_screen.dart:140: onPressed: () => setState(() => _obscure = !_obscure),
+dashboard_screen.dart:203: onTap: () => ref.read(selectedTabProvider.notifier).set(3),
+dashboard_screen.dart:414: onTap: () => ref.read(selectedTabProvider.notifier).set(a.$3),
+maps_screen.dart:211: TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+maps_screen.dart:212: TextButton(onPressed: () => Navigator.pop(context, true),
+maps_screen.dart:256: onTap: () => Navigator.push(context, MaterialPageRoute(
+maps_screen.dart:396: onPressed: () => _togglePlay(pts.length)),
+reports_screen.dart:872: onTap: () => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+scouting_screen.dart:157: TextButton(onPressed: () => Navigator.pop(context), child: Text(s.continueAnyway)),
+scouting_screen.dart:160: onPressed: () { Navigator.pop(context); Geolocator.openAppSettings(); },
+scouting_screen.dart:539: onTap: () => _addFinding(label),
+topbar_widgets.dart:240: onTap: () => _showWeatherDetail(context, w),
+topbar_widgets.dart:651: onTap: () => _showPanel(context),
+topbar_widgets.dart:834: onTap: () => onMarkRead(n.id),
+settings_screen.dart:156: onTap: () => setState(() => _activeTab = tab),
+settings_screen.dart:206: onTap: () => setState(() => _activeTab = tab),
+settings_screen.dart:331: onTap: () => expanded.value = !isExpanded,
+settings_screen.dart:490: _saveButton(s.saveProfile, onTap: () async {
+settings_screen.dart:644: onTap: () => ref.read(localeProvider.notifier).setLanguage('en'),
+settings_screen.dart:661: onTap: () => ref.read(localeProvider.notifier).setLanguage('sw'),
+settings_screen.dart:925: TextButton(onPressed: () => Navigator.pop(context),
+settings_screen.dart:928: onPressed: () async {
+app_shell.dart:172: onTap: () async {
+app_shell.dart:183: onPressed: () => Navigator.pop(context, false),
+app_shell.dart:186: onPressed: () => Navigator.pop(context, true),
+
+=== EXPORT (11) ===
+reports_screen.dart:411: _exportChip(Icons.picture_as_pdf_outlined,'PDF',_P.red,()=>_showExport('pdf',s)),
+reports_screen.dart:413: _exportChip(Icons.table_chart_outlined,'Excel',_P.leaf,()=>_showExport('excel',s)),
+reports_screen.dart:953: // ── Export ────────────────────────────────────────────────────────────────
+reports_screen.dart:954: void _showExport(String type, AppStrings s){
+reports_screen.dart:957: title:Text(type=='pdf'?s.exportPdf:s.exportExcel,
+reports_screen.dart:959: content:Text(type=='pdf'?s.exportPdfDesc:s.exportExcelDesc),
+reports_screen.dart:965: content:Text('${type=='pdf'?s.exportPdf:s.exportExcel} — coming soon'),
+app_strings.dart:139: String get exportPdf          => _t('Export PDF',   'Hamisha PDF');
+app_strings.dart:140: String get exportExcel        => _t('Export Excel', 'Hamisha Excel');
+app_strings.dart:324: String get exportPdfDesc   => _t('A PDF report will be generated for the current filters.','Ripoti y
+app_strings.dart:325: String get exportExcelDesc => _t('An Excel file with all inspection data will be saved.','Faili la E
+
+=== WEATHER (49) ===
+topbar_widgets.dart:22: class WeatherData {
+topbar_widgets.dart:25: final String iconCode; // OpenWeatherMap icon id e.g. "01d"
+topbar_widgets.dart:30: const WeatherData({
+topbar_widgets.dart:39: factory WeatherData.mock() => WeatherData(
+topbar_widgets.dart:48: factory WeatherData.fromJson(Map<String, dynamic> json) {
+topbar_widgets.dart:50: final weather =
+topbar_widgets.dart:51: (json['weather'] as List).first as Map<String, dynamic>;
+topbar_widgets.dart:53: return WeatherData(
+topbar_widgets.dart:55: description: weather['description'] as String,
+topbar_widgets.dart:56: iconCode: weather['icon'] as String,
+topbar_widgets.dart:84: //  WEATHER SERVICE
+topbar_widgets.dart:86: class WeatherService {
+topbar_widgets.dart:87: //     Free tier: https://openweathermap.org/api
+topbar_widgets.dart:89: static const _apiKey = '';
+topbar_widgets.dart:95: static Future<WeatherData> fetch() async {
+topbar_widgets.dart:96: if (_apiKey.isEmpty) return WeatherData.mock();
+topbar_widgets.dart:99: 'https://api.openweathermap.org/data/2.5/weather'
+topbar_widgets.dart:100: '?lat=$_lat&lon=$_lon&appid=$_apiKey',
+topbar_widgets.dart:104: return WeatherData.fromJson(
+topbar_widgets.dart:108: return WeatherData.mock();
+topbar_widgets.dart:112: //  WEATHER CHIP  (real-time, auto-refreshes every 10 min)
+topbar_widgets.dart:114: class WeatherChip extends StatefulWidget {
+topbar_widgets.dart:115: const WeatherChip({super.key});
+topbar_widgets.dart:118: State<WeatherChip> createState() => _WeatherChipState();
+topbar_widgets.dart:121: class _WeatherChipState extends State<WeatherChip>
+topbar_widgets.dart:123: WeatherData? _weather;
+topbar_widgets.dart:142: _fetchWeather();
+topbar_widgets.dart:145: Timer.periodic(const Duration(minutes: 10), (_) => _fetchWeather());
+topbar_widgets.dart:155: Future<void> _fetchWeather() async {
+topbar_widgets.dart:158: final data = await WeatherService.fetch();
+topbar_widgets.dart:161: _weather = data;
+topbar_widgets.dart:167: Widget _weatherIcon(String code, double size) {
+topbar_widgets.dart:212: if (_loading && _weather == null) {
+topbar_widgets.dart:238: final w = _weather!;
+topbar_widgets.dart:240: onTap: () => _showWeatherDetail(context, w),
+topbar_widgets.dart:248: child: _weatherIcon(w.iconCode, 22),
+topbar_widgets.dart:292: void _showWeatherDetail(BuildContext context, WeatherData w) {
+topbar_widgets.dart:296: builder: (_) => _WeatherDetailSheet(weather: w, iconBuilder: _weatherIcon),
+topbar_widgets.dart:343: //  WEATHER DETAIL BOTTOM SHEET
+topbar_widgets.dart:345: class _WeatherDetailSheet extends ConsumerWidget {
+topbar_widgets.dart:346: final WeatherData weather;
+topbar_widgets.dart:349: const _WeatherDetailSheet({
+topbar_widgets.dart:350: required this.weather,
+topbar_widgets.dart:358: DateTime.now().difference(weather.fetchedAt).inMinutes;
+topbar_widgets.dart:403: child: iconBuilder(weather.iconCode, 48)),
+topbar_widgets.dart:421: weather.description
+topbar_widgets.dart:466: value: '${weather.humidity.round()}%'),
+topbar_widgets.dart:472: value: '${weather.windKph.round()} km/h'),
+topbar_widgets.dart:967: //      const WeatherChip(),
+
+=== AI (1) ===
+app_strings.dart:141: String get aiInsight          => _t('AI Insight',   'Ufahamu wa AI');

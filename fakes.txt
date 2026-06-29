@@ -1,0 +1,16 @@
+analytics_screen.dart:312: spots: v.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+maps_screen.dart:328: _cursor = (pointCount - 1).toDouble();
+maps_screen.dart:390: Slider(value: idx.toDouble(), min: 0, max: (pts.length - 1).toDouble(),
+reports_screen.dart:109: d[idx]=(t['disease'] as num? ?? 0).toDouble();
+reports_screen.dart:110: p[idx]=(t['pest'] as num? ?? 0).toDouble();
+reports_screen.dart:111: w[idx]=(t['water'] as num? ?? 0).toDouble();
+reports_screen.dart:619: spots:v.asMap().entries.map((e)=>FlSpot(e.key.toDouble(),e.value)).toList(),
+reports_screen.dart:713: final maxF=top.first.findings.toDouble();
+topbar_widgets.dart:54: tempC: (main['temp'] as num).toDouble() - 273.15,
+topbar_widgets.dart:57: humidity: (main['humidity'] as num).toDouble(),
+topbar_widgets.dart:58: windKph: ((wind['speed'] as num).toDouble() * 3.6),
+topbar_widgets.dart:88: //     Leave empty to use realistic mock data.
+farm_repository.dart:109: areaM2: (j['area_m2'] as num?)?.toDouble(),
+scout_trail.dart:17: lat: (m['lat'] as num).toDouble(),
+scout_trail.dart:18: lng: (m['lng'] as num).toDouble(),
+scout_trail.dart:20: accuracy: m['accuracy'] != null ? (m['accuracy'] as num).toDouble() : null,
