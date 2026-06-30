@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../shared/error/app_error_handler.dart';
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -1403,10 +1404,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   subject: name,
                 ));
               } catch(e) {
-                if(mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text('Excel export failed: \$e'),
-                  backgroundColor: AppColors.critical,
-                  behavior: SnackBarBehavior.floating)); }
+                if(mounted) AppErrorHandler.showError(context, e, context2: 'excel export');
               }
               return;
             }
@@ -1421,10 +1419,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   name:'FlowerScout_Report_${DateTime.now().millisecondsSinceEpoch}.pdf');
             } catch(e){
               if(mounted) Navigator.pop(context);
-              if(mounted) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content:Text('PDF export failed: $e'),
-                behavior:SnackBarBehavior.floating,
-                shape:RoundedRectangleBorder(borderRadius:BorderRadius.circular(10)))); }
+              if(mounted) AppErrorHandler.showError(context, e, context2: 'pdf export');
             }
           },
           style:ElevatedButton.styleFrom(backgroundColor:AppColors.forest,foregroundColor:Colors.white,
