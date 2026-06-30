@@ -8,7 +8,7 @@ class AppErrorHandler {
   /// Maps any caught exception to a short, friendly message.
   /// Always logs the real exception via debugPrint for diagnosis.
   static String describe(Object error, {String context = 'operation'}) {
-    debugPrint('[error][\$context] \${error.runtimeType}: \$error');
+    debugPrint('[error][$context] ${error.runtimeType}: $error');
 
     if (error is AuthException) {
       return 'Authentication issue. Please sign in again.';
@@ -55,5 +55,5 @@ class TimeoutException implements Exception {
   final String message;
   TimeoutException(this.message);
   @override
-  String toString() => 'TimeoutException: \$message';
+  String toString() => 'TimeoutException: $message';
 }
