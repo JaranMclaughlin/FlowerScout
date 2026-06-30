@@ -330,7 +330,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
       } catch (queueError) {
         if (mounted) {
           setState(() { _submitting = false; _submitted = false; });
-          AppErrorHandler.showError(context, e, context2: 'submit inspection report');
+          AppErrorHandler.showError(context, queueError, context2: 'submit inspection report');
         }
       }
     }
