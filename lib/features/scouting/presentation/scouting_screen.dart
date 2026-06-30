@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../shared/error/app_error_handler.dart';
 import '../../../shared/providers/farm_providers.dart';
 import '../../../shared/providers/farm_repository.dart';
 import '../../../shared/providers/locale_provider.dart';
@@ -329,10 +330,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
       } catch (queueError) {
         if (mounted) {
           setState(() { _submitting = false; _submitted = false; });
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('${ref.read(stringsProvider).failedToSubmit}$e'),
-            backgroundColor: AppColors.critical,
-          ));
+          AppErrorHandler.showError(context, e, context2: 'submit inspection report');
         }
       }
     }
