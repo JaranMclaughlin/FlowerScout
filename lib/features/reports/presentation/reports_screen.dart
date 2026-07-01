@@ -58,7 +58,7 @@ class _Inspection {
       variety: r['variety_name'] as String? ?? '—',
       category: topCat, severity: topSev,
       inspectorId: scoutId.length >= 8 ? scoutId.substring(0, 8) : scoutId,
-      inspectorName: r['scout_name'] as String? ?? '',
+      inspectorName: r['scout_name'] as String? ?? (r['user_profiles'] as Map?)?['full_name'] as String? ?? '',
       findings: (r['inspection_findings'] as List? ?? [])
           .map((f) => Map<String,dynamic>.from(f as Map)).toList(),
     );
@@ -210,8 +210,9 @@ Future<List<_Inspection>> _fetchInspections(String period,
   }
   var q=db.from('inspection_reports').select('''
     id, submitted_at, started_at, variety_name, greenhouse_id, scout_id,
-    greenhouses!inner(code),
-    inspection_findings(category, severity)
+    user_profiles!inspection_reports_scout_id_profiles_fkey(full_name),
+    greenhouses!inner(code, farm_id),
+    inspection_findings(category, severity, issue, photo_urls)
   ''').gte('submitted_at',since.toIso8601String());
   if (greenhouseId!=null) { q=q.eq('greenhouse_id',greenhouseId); }
   else if (farmId!=null) { q=q.eq('greenhouses.farm_id',farmId); }
@@ -615,7 +616,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
         rightTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
         topTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
-        bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:24,
+        bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:24,interval:1,
           getTitlesWidget:(v,_){
             final i=v.toInt();
             if(i<0||i>=labels.length) return const SizedBox();
@@ -651,7 +652,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         leftTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
         rightTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
         topTitles:AxisTitles(sideTitles:SideTitles(showTitles:false)),
-        bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:24,
+        bottomTitles:AxisTitles(sideTitles:SideTitles(showTitles:true,reservedSize:24,interval:1,
           getTitlesWidget:(v,_){
             final i=v.toInt();
             if(i<0||i>=labels.length) return const SizedBox();
@@ -1112,7 +1113,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 pw.Text('Inspection Report', style: pw.TextStyle(fontSize: 12, color: mist)),
               ],
             ),
-            pw.Text('Generated \${DateTime.now().toString().split(".").first}',
+            pw.Text('Generated ${DateTime.now().toString().split(".").first}',
                 style: pw.TextStyle(fontSize: 9, color: mist)),
           ],
         ),
@@ -1306,7 +1307,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                 CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 0));
 
     final dateCell = sheet.cell(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1));
-    dateCell.value = TextCellValue('Generated: \${DateTime.now().toString().split(\' \').first}');
+    dateCell.value = TextCellValue('Generated: ${DateTime.now().toString().split(' ').first}');
     dateCell.cellStyle = CellStyle(fontColorHex: ExcelColor.fromHexString('#6B7F6E'));
     sheet.merge(CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
                 CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: 1));

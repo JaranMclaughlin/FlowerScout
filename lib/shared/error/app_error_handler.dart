@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 /// Centralized error handling: turns raw exceptions into clean,
 /// user-facing messages while logging full detail for debugging.
@@ -7,8 +8,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class AppErrorHandler {
   /// Maps any caught exception to a short, friendly message.
   /// Always logs the real exception via debugPrint for diagnosis.
-  static String describe(Object error, {String context = 'operation'}) {
+  static String describe(Object error, {String context = 'operation', StackTrace? stackTrace}) {
     debugPrint('[error][$context] ${error.runtimeType}: $error');
+    Sentry.captureException(error, stackTrace: stackTrace);
 
     if (error is AuthException) {
       return 'Authentication issue. Please sign in again.';
@@ -39,8 +41,9 @@ class AppErrorHandler {
     Object error, {
     String context2 = 'operation',
     Color backgroundColor = const Color(0xFFB53030),
+    StackTrace? stackTrace,
   }) {
-    final message = describe(error, context: context2);
+    final message = describe(error, context: context2, stackTrace: stackTrace);
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(message),

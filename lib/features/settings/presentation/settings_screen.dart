@@ -1,8 +1,6 @@
 ﻿import 'package:flutter/material.dart';
-import '../../auth/presentation/login_screen.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../shared/providers/farm_providers.dart';
 import '../../../shared/providers/locale_provider.dart';
 import '../../../shared/l10n/app_strings.dart';
@@ -704,14 +702,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _settingRow(label: 'FlowerScout', subtitle: _s.versionLabel,
             trailing: _statusBadge('Latest')),
         _divider(),
-        _settingRow(
-          label: _s.signOutLabel,
-          subtitle: _s.logOut,
-          labelColor: const Color(0xFFD32F2F),
-          trailing: const Icon(Icons.logout_rounded,
-              color: Color(0xFFD32F2F), size: 18),
-          onTap: _confirmSignOut,
-        ),
       ])),
       const SizedBox(height: 24),
       _saveButton(_s.savePreferences),
@@ -925,33 +915,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     child: Text('v1.0.0', style: _T.label.copyWith(
         fontSize: 11, color: _C.slate)));
 
-  void _confirmSignOut() {
-    showDialog(context: context, builder: (_) => AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(_s.signOutQ, style: const TextStyle(
-          fontFamily: 'Georgia', fontSize: 18)),
-      content: const Text(
-          'You will need to log in again to access FlowerScout.'),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel')),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            await Supabase.instance.client.auth.signOut();
-            if (mounted) {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-                (route) => false,
-              );
-            }
-          },
-          child: Text(_s.signOutLabel,
-              style: TextStyle(color: Color(0xFFD32F2F))),
-        ),
-      ],
-    ));
-  }
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   String _initials(String name) {

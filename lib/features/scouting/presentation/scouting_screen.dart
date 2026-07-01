@@ -13,6 +13,8 @@ import '../../../shared/providers/locale_provider.dart';
 import '../../../shared/l10n/app_strings.dart';
 import '../../../shared/trail/trail_tracking_controller.dart';
 import '../../../core/offline/offline_sync_service.dart';
+import '../../../core/session/user_session.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../../shared/theme/app_colors.dart';
 
 class FindingData {
@@ -113,6 +115,7 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
       );
       setState(() => _gpsPosition = pos);
     } catch (_) {}
+    if (!mounted) return;
     _startSession(withLocation: true);
   }
 
@@ -274,8 +277,18 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
         _headerAnim.forward();
       }
     } catch (e) {
-      // Network failure - save to offline queue
-      try {
+      // Only fall back to the offline queue if there is genuinely no network.
+      // Any other failure (RLS, validation, storage, etc.) should surface
+      // as a real error so it can be fixed, not be hidden behind a false
+      // "offline" message.
+      final connectivity = await Connectivity().checkConnectivity();
+      final hasNetwork = connectivity.any((r) =>
+          r == ConnectivityResult.mobile ||
+          r == ConnectivityResult.wifi   ||
+          r == ConnectivityResult.ethernet);
+
+      if (!hasNetwork) {
+        try {
         final user = Supabase.instance.client.auth.currentUser;
         await OfflineSyncService.saveToQueue({
           'scout_id': user?.id,
@@ -327,10 +340,23 @@ class _ScoutingScreenState extends ConsumerState<ScoutingScreen>
             ]),
           ));
         }
-      } catch (queueError) {
+        } catch (queueError) {
+          if (mounted) {
+            setState(() { _submitting = false; _submitted = false; });
+            AppErrorHandler.showError(context, queueError, context2: 'submit inspection report');
+          }
+        }
+      } else {
+        // Genuine error while online — show it instead of masking as offline.
         if (mounted) {
           setState(() { _submitting = false; _submitted = false; });
-          AppErrorHandler.showError(context, queueError, context2: 'submit inspection report');
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            backgroundColor: AppColors.critical,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            content: Text('Submit failed: $e',
+                style: const TextStyle(color: Colors.white)),
+          ));
         }
       }
     }

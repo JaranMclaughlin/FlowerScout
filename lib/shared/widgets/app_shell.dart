@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../features/auth/presentation/login_screen.dart';
 import '../../features/dashboard/presentation/dashboard_screen.dart';
 import '../../features/scouting/presentation/scouting_screen.dart';
 import '../../features/maps/presentation/maps_screen.dart';
@@ -13,6 +12,7 @@ import '../providers/shell_tab_provider.dart';
 import '../providers/locale_provider.dart';
 import '../l10n/app_strings.dart';
 import '../../core/session/user_session.dart';
+import '../../features/auth/presentation/login_screen.dart';
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -191,11 +191,18 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
           );
           if (confirm == true) {
-            await Supabase.instance.client.auth.signOut();
-            if (!mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
+            // AuthGate's onAuthStateChange listener owns navigation after
+            // sign-out — pushing here as well caused a race that froze
+            // the screen. Just sign out and let the gate handle the rest.
+            try {
+              await Supabase.instance.client.auth.signOut()
+                  .timeout(const Duration(seconds: 5));
+            } catch (_) {
+              await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+            }
+            navigatorKey.currentState?.pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const LoginScreen()),
-              (route) => false,
+              (_) => false,
             );
           }
         },

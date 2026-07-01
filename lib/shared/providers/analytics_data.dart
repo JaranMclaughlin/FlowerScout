@@ -230,7 +230,8 @@ Future<List<InspectionRecord>> fetchInspectionRecords(
   String lang,
 ) async {
   var q = db.from('inspection_reports').select('''
-    id, submitted_at, started_at, variety_name, greenhouse_id, scout_id, scout_name, scout_name,
+    id, submitted_at, started_at, variety_name, greenhouse_id, scout_id,
+    user_profiles!inspection_reports_scout_id_profiles_fkey(full_name),
     greenhouses!inner(code, farm_id),
     inspection_findings(category, severity)
   ''').gte('submitted_at', filter.since.toIso8601String());

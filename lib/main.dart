@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'core/offline/offline_sync_service.dart';
 import 'core/theme/app_theme.dart';
 import 'core/session/user_session.dart';
@@ -14,15 +15,24 @@ import 'shared/providers/locale_provider.dart';
 import 'shared/trail/providers/trail_providers.dart';
 import 'shared/trail/trail_tracking_controller.dart';
 
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const _Bootstrap());
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<void> main() async {
+  await dotenv.load(fileName: '.env');
+  final sentryDsn = dotenv.env['SENTRY_DSN'];
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = sentryDsn;
+      options.tracesSampleRate = 0.2;
+      options.environment = kDebugMode ? 'debug' : 'production';
+    },
+    appRunner: () {
+      WidgetsFlutterBinding.ensureInitialized();
+      runApp(const _Bootstrap());
+    },
+  );
 }
 
-// ── Bootstrap ─────────────────────────────────────────────────────────────
-// Renders a splash immediately instead of leaving the user on a blank
-// screen while dotenv / Supabase / locale init run. Has a timeout and a
-// retry path so a slow or failed network doesn't hang the app forever.
 class _Bootstrap extends StatefulWidget {
   const _Bootstrap();
   @override
@@ -54,14 +64,14 @@ class _BootstrapState extends State<_Bootstrap> {
 
       await Supabase.initialize(
         url:     dotenv.env['SUPABASE_URL']!,
-        publishableKey: dotenv.env['SUPABASE_ANON_KEY']!,
+        anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
       ).timeout(const Duration(seconds: 15));
       debugPrint('[startup] Supabase initialized');
 
       await localeFuture.timeout(const Duration(seconds: 10));
       debugPrint('[startup] locale ready');
     } catch (e, st) {
-      debugPrint('[startup] init failed: \$e');
+      debugPrint('[startup] init failed: $e');
       if (kDebugMode) debugPrintStack(stackTrace: st);
       rethrow;
     }
@@ -173,6 +183,7 @@ class FlowerScoutApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     ref.watch(localeProvider);
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Flower Scout',
       theme: AppTheme.lightTheme,
@@ -196,8 +207,6 @@ class _AuthGateState extends ConsumerState<_AuthGate> with WidgetsBindingObserve
     WidgetsBinding.instance.addObserver(this);
     OfflineSyncService.startListening();
     _loggedIn = Supabase.instance.client.auth.currentSession != null;
-    // Restored session on cold start: load profile before rendering AppShell
-    // so isManagerProvider reads the correct role on first build.
     if (_loggedIn) {
       _loadProfileForCurrentUser().then((_) {
         if (mounted) setState(() {});
@@ -222,19 +231,19 @@ class _AuthGateState extends ConsumerState<_AuthGate> with WidgetsBindingObserve
         } else {
           setState(() => _loggedIn = true);
         }
-        // Drain any queued reports from when the scout was offline
-        
       } else if (event == AuthChangeEvent.signedOut) {
         UserSession.currentProfile = UserProfile.scout;
         UserSession.currentUser    = '';
-        final trailState = ref.read(trailTrackingControllerProvider);
-        if (trailState.isActive) {
-          await ref.read(trailTrackingControllerProvider.notifier).stop();
-        }
-        try {
-          final repo = ref.read(trailRepositoryProvider);
-          await repo.endStaleTrails();
-        } catch (_) {}
+        Future.microtask(() async {
+          try {
+            final trailState = ref.read(trailTrackingControllerProvider);
+            if (trailState.isActive) {
+              await ref.read(trailTrackingControllerProvider.notifier).stop();
+            }
+            final repo = ref.read(trailRepositoryProvider);
+            await repo.endStaleTrails();
+          } catch (_) {}
+        });
         if (!mounted) return;
         setState(() => _loggedIn = false);
       }
@@ -249,9 +258,7 @@ class _AuthGateState extends ConsumerState<_AuthGate> with WidgetsBindingObserve
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed && _loggedIn) {
-      
-    }
+    if (state == AppLifecycleState.resumed && _loggedIn) {}
   }
 
   Future<void> _loadProfileForCurrentUser() async {
@@ -272,9 +279,7 @@ class _AuthGateState extends ConsumerState<_AuthGate> with WidgetsBindingObserve
         _              => UserProfile.scout,
       };
     } catch (e) {
-      // Don't crash the auth flow over a failed profile lookup, but don't
-      // pretend it succeeded either - this is worth knowing about in logs.
-      debugPrint('[auth] failed to load user profile: \$e');
+      debugPrint('[auth] failed to load user profile: $e');
     }
   }
 
@@ -284,12 +289,3 @@ class _AuthGateState extends ConsumerState<_AuthGate> with WidgetsBindingObserve
     return _loggedIn ? const AppShell() : const LoginScreen();
   }
 }
-
-
-
-
-
-
-
-
-
