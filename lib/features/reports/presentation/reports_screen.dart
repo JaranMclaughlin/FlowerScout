@@ -1393,7 +1393,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           onPressed:() async {
             Navigator.pop(ctx);
             if(type!='pdf'){
-              Navigator.pop(ctx);
               try {
                 final allRecords = await _fetchAllForExport();
                 final filtered  = _applyActiveFilter(allRecords);

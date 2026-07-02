@@ -13,6 +13,7 @@ import '../providers/locale_provider.dart';
 import '../l10n/app_strings.dart';
 import '../../core/session/user_session.dart';
 import '../../features/auth/presentation/login_screen.dart';
+import '../../main.dart' show navigatorKey;
 
 class AppShell extends ConsumerStatefulWidget {
   const AppShell({super.key});
@@ -29,8 +30,6 @@ class _AppShellState extends ConsumerState<AppShell> {
     SettingsScreen(),
   ];
 
-  // Tabs visible to scouts: Dashboard, Scouting, Settings only
-  // Tabs visible to managers/admins: all five
   List<_NavItem> _navItems(AppStrings s, bool isScout) {
     final all = [
       _NavItem(Icons.dashboard_rounded,  Icons.dashboard_outlined,  s.navDashboard, 0),
@@ -39,7 +38,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       _NavItem(Icons.bar_chart_rounded,  Icons.bar_chart_outlined,  s.navReports,   3),
       _NavItem(Icons.settings_rounded,   Icons.settings_outlined,   s.navSettings,  4),
     ];
-    if (isScout) return [all[0], all[1], all[4]]; // Dashboard, Scouting, Settings
+    if (isScout) return [all[0], all[1], all[4]];
     return all;
   }
 
@@ -49,14 +48,11 @@ class _AppShellState extends ConsumerState<AppShell> {
     final profile = UserSession.currentProfile;
     final isScout = profile == UserProfile.scout;
     final items = _navItems(s, isScout);
-
-    // Clamp tab index so scouts don't land on a hidden tab
     final rawIndex = ref.watch(selectedTabProvider);
     final validPageIndices = items.map((i) => i.pageIndex).toList();
     final currentPageIndex = validPageIndices.contains(rawIndex)
         ? rawIndex
         : items.first.pageIndex;
-
     final isTablet = MediaQuery.of(context).size.width >= 600;
     return isTablet
         ? _tabletLayout(s, items, currentPageIndex)
@@ -66,7 +62,6 @@ class _AppShellState extends ConsumerState<AppShell> {
   void _setIndex(int pageIndex) =>
       ref.read(selectedTabProvider.notifier).set(pageIndex);
 
-  // ── Phone ─────────────────────────────────────────────────────────────────
   Widget _phoneLayout(AppStrings s, List<_NavItem> items, int currentPageIndex) {
     return Scaffold(
       body: _pages[currentPageIndex],
@@ -105,7 +100,6 @@ class _AppShellState extends ConsumerState<AppShell> {
     );
   }
 
-  // ── Tablet/Desktop ────────────────────────────────────────────────────────
   Widget _tabletLayout(AppStrings s, List<_NavItem> items, int currentPageIndex) {
     final isExtended = MediaQuery.of(context).size.width >= 800;
     return Scaffold(
@@ -171,8 +165,8 @@ class _AppShellState extends ConsumerState<AppShell> {
         borderRadius: BorderRadius.circular(AppSizes.radiusMd),
         onTap: () async {
           final confirm = await showDialog<bool>(
-            context: context,
-            builder: (_) => AlertDialog(
+            context: navigatorKey.currentContext ?? context,
+            builder: (dialogContext) => AlertDialog(
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppSizes.radiusLg)),
               title: Text(s.signOutConfirm,
@@ -180,10 +174,10 @@ class _AppShellState extends ConsumerState<AppShell> {
               content: Text(s.signOutMsg),
               actions: [
                 TextButton(
-                    onPressed: () => Navigator.pop(context, false),
+                    onPressed: () => Navigator.pop(dialogContext, false),
                     child: Text(s.cancel)),
                 TextButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () => Navigator.pop(dialogContext, true),
                   child: Text(s.signOut,
                       style: const TextStyle(color: AppColors.critical)),
                 ),
@@ -191,14 +185,12 @@ class _AppShellState extends ConsumerState<AppShell> {
             ),
           );
           if (confirm == true) {
-            // AuthGate's onAuthStateChange listener owns navigation after
-            // sign-out — pushing here as well caused a race that froze
-            // the screen. Just sign out and let the gate handle the rest.
             try {
               await Supabase.instance.client.auth.signOut()
                   .timeout(const Duration(seconds: 5));
             } catch (_) {
-              await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+              await Supabase.instance.client.auth.signOut(
+                  scope: SignOutScope.local);
             }
             navigatorKey.currentState?.pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -237,5 +229,3 @@ class _NavItem {
   final int pageIndex;
   const _NavItem(this.icon, this.iconOutlined, this.label, this.pageIndex);
 }
-
-
