@@ -1408,7 +1408,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               }
               return;
             }
-            showDialog(context:context,barrierDismissible:false,
+            if(!mounted) return;
+          showDialog(context:context,barrierDismissible:false,
               builder:(_)=>const Center(child:CircularProgressIndicator(color:AppColors.forest)));
             try {
               final allRecords=await _fetchAllForExport();
